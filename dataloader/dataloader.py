@@ -1,20 +1,15 @@
-from argparse import ArgumentParser
 import os
-import random
-import time
+from argparse import ArgumentParser
 
-from loguru import logger
 import numpy as np
 import pandas as pd
 import torch
-from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms
-from PIL import Image
+from loguru import logger
+from torch.utils.data import Dataset
+
 
 # from natsort import natsorted
 # from accimage import Image as AccImage
-
-import sys
 
 
 def divide_intervals(input_df, frames_per_segment=30):
