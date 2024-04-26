@@ -1,0 +1,14 @@
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch==2.1.1+cu118
+torchvision==0.16.1+cu118
+
+numpy
+pandas
+scikit-learn
+tqdm
+loguru
+matplotlib
+seaborn
+wandb
+
+pyrebase4
