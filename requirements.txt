@@ -12,3 +12,4 @@ seaborn
 wandb
 
 pyrebase4
+yacs
