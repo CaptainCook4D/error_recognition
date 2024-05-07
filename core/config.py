@@ -16,6 +16,8 @@ class Config(object):
         self.phase = 'train'
         self.segment_length = 1
 
+        self.ckpt = None
+
         self.parser = self.setup_parser()
         self.args = vars(self.parser.parse_args())
         self.__dict__.update(self.args)
@@ -33,5 +35,9 @@ class Config(object):
 
         parser.add_argument('--batch_size', type=int, default=32, help='batch size')
         parser.add_argument('--num_epochs', type=int, default=100, help='number of epochs')
+
+        parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
+        parser.add_argument('--weight_decay', type=float, default=1e-4, help='weight decay')
+        parser.add_argument('--ckpt', type=str, default=None, help='checkpoint path')
 
         return parser
