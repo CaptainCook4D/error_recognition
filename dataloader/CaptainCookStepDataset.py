@@ -17,7 +17,7 @@ class CaptainCookStepDataset(Dataset):
         assert self._phase in ["train", "val", "test"], f"Invalid phase: {self._phase}"
         self._features_directory = self._config.features_directory
 
-        with open('../annotations/data_splits/environment_data_split_combined.json', 'r') as file:
+        with open('../annotations/data_splits/recordings_data_split_combined.json', 'r') as file:
             self._recording_ids = json.load(file)[self._phase]
 
         with open('../annotations/annotation_json/step_annotations.json', 'r') as f:
