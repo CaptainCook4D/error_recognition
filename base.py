@@ -159,6 +159,10 @@ def test_er_model(model, test_loader, criterion, device, phase):
         step_output = all_outputs[start:end]
         step_target = all_targets[start:end]
 
+        sorted_step_output = np.sort(step_output)
+        # Top 10% of the predictions - 90th percentile
+        threshold = np.percentile(sorted_step_output, 90)
+        step_output = step_output[step_output > threshold]
         mean_step_output = np.mean(step_output)
         step_target = 1 if np.mean(step_target) > 0.95 else 0
 
@@ -173,7 +177,7 @@ def test_er_model(model, test_loader, criterion, device, phase):
     precision = precision_score(all_step_targets, pred_step_labels)
     recall = recall_score(all_step_targets, pred_step_labels)
     f1 = f1_score(all_step_targets, pred_step_labels)
-    auc = roc_auc_score(all_step_targets, all_step_outputs)
+    auc = roc_auc_score(all_step_targets, pred_step_labels)
 
     step_metrics = {
         const.PRECISION: precision,

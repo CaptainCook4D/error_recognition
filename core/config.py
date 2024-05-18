@@ -18,7 +18,7 @@ class Config(object):
         self.segment_length = 1
         self.features_directory = "/data/rohith/captain_cook/features/gopro/segments"
         self.ckpt_directory = "/data/rohith/captain_cook/checkpoints/error_recognition"
-        self.split = 'environment'
+        self.split = 'recordings'
         self.batch_size = 1
         self.test_batch_size = 1
         self.num_epochs = 100
