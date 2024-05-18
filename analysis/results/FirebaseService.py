@@ -1,7 +1,7 @@
 # This file contains all files related to firebase
 import pyrebase
 from loguru import logger
-from constants import ResultConstants as const
+from constants import Constants as const
 
 firebaseProdConfig = {
 	"apiKey": "AIzaSyCyn-mmp-ZLkk2wEKLjEE9gxm7a8Ewx7bw",

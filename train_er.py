@@ -1,13 +1,15 @@
-import numpy as np
-from torch import nn
+import os
+
 import torch
 import torch.optim as optim
+from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from core.models.blocks import MLP
+
+from base import test_er_model, fetch_model, store_model
+from constants import Constants as const
 from core.config import Config
 from dataloader.CaptainCookStepDataset import CaptainCookStepDataset
-from test_er import test_er
 
 
 def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
@@ -18,17 +20,9 @@ def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
 
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
-
-        # chunk_losses = []
-        # for i in range(0, data.shape[1], 10):
-        #     data_chunk = data[:, i:i + 10, :]
-        #     target_chunk = target[:, i:i + 10, :]
-
-        # Send to the model and calculate the loss
         optimizer.zero_grad()
         output_chunk = model(data)
         loss = criterion(output_chunk, target)
-        # chunk_losses.append(loss.item())
         loss.backward()
         optimizer.step()
         train_losses.append(loss.item())
@@ -44,32 +38,41 @@ def train_er(config):
     torch.manual_seed(config.seed)
     device = config.device
 
-    train_dataset = CaptainCookStepDataset(config, 'train')
+    train_dataset = CaptainCookStepDataset(config, const.TRAIN, config.split)
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
-    test_dataset = CaptainCookStepDataset(config, 'val')
-    test_loader = DataLoader(test_dataset, batch_size=config.test_batch_size)
+    val_dataset = CaptainCookStepDataset(config, const.VAL, config.split)
+    val_loader = DataLoader(val_dataset, batch_size=config.test_batch_size)
 
-    d_model = None
-    for data, _ in train_loader:
-        d_model = data.shape[2]
-        break
-    assert d_model is not None, "Data not found in the dataset"
-
-    model = MLP(d_model, d_model // 2, 1).to(device)
+    model = fetch_model(config)
     optimizer = optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
     criterion = nn.BCEWithLogitsLoss()
 
     # Initialize variables to track the best model based on the desired metric (e.g., AUC)
     best_model = {'model_state': None, 'metric': 0}
 
+    model_name = config.model_name
+    if config.model_name is None:
+        model_name = f"{config.task_name}_{config.variant}_{config.backbone}"
+
+    train_stats_directory = f"stats/{config.task_name}/{config.variant}/{config.backbone}"
+    os.makedirs(train_stats_directory, exist_ok=True)
+    train_stats_file = f"{model_name}_training_performance.txt"
+    train_stats_file_path = os.path.join(train_stats_directory, train_stats_file)
+
     # Open a file to store the losses and metrics
-    with open('training_performance.txt', 'w') as f:
+    with open(train_stats_file_path, 'w') as f:
         f.write('Epoch, Train Loss, Test Loss, Precision, Recall, F1, AUC\n')
         for epoch in range(1, config.num_epochs + 1):
             train_losses = train_epoch(model, device, train_loader, optimizer, epoch, criterion)
-            test_losses, precision, recall, f1, auc = test_er(model, device, test_loader, 'val', criterion)
+            val_losses, sub_step_metrics, step_metrics = test_er_model(model, val_loader, criterion, device,
+                                                                       phase='val')
             avg_train_loss = sum(train_losses) / len(train_losses)
-            avg_test_loss = sum(test_losses) / len(test_losses)
+            avg_test_loss = sum(val_losses) / len(val_losses)
+
+            precision = step_metrics['precision']
+            recall = step_metrics['recall']
+            f1 = step_metrics['f1']
+            auc = step_metrics['auc']
 
             # Write losses and metrics to file
             f.write(
@@ -84,11 +87,12 @@ def train_er(config):
                 best_model['model_state'] = model.state_dict()
 
             if epoch % 10 == 0 and config.save_model:
-                torch.save(model.state_dict(), f"{config.backbone}_{epoch}_MLP.pt")
+                store_model(model, config, ckpt_name=f"{model_name}_epoch_{epoch}.pt")
 
         # Save the best model
         if best_model['model_state'] is not None:
-            torch.save(best_model['model_state'], f"{config.backbone}_best_MLP.pt")
+            model.load_state_dict(best_model['model_state'])
+            store_model(model, config, ckpt_name=f"{model_name}_best.pt")
 
 
 if __name__ == "__main__":

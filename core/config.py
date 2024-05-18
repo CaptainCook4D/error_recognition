@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from constants import Constants as const
 
 
 # TODO: Finish all the configuration parameters.
@@ -28,6 +29,11 @@ class Config(object):
         self.ckpt = None
         self.seed = 1000
         self.device = 'cuda'
+
+        self.variant = const.MLP_VARIANT
+        self.model_name = None
+        self.task_name = const.ERROR_RECOGNITION
+
         self.parser = self.setup_parser()
         self.args = vars(self.parser.parse_args())
         self.save_model = True
@@ -45,7 +51,8 @@ class Config(object):
         # ----------------------------------------------------------------------------------------------
 
         parser.add_argument('--batch_size', type=int, default=1, help='batch size')
-        parser.add_argument('--test-batch-size', type=int, default=1, help='input batch size for testing (default: 1000)')
+        parser.add_argument('--test-batch-size', type=int, default=1,
+                            help='input batch size for testing (default: 1000)')
         parser.add_argument('--num_epochs', type=int, default=100, help='number of epochs')
         parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
         parser.add_argument('--weight_decay', type=float, default=1e-3, help='weight decay')
@@ -59,4 +66,7 @@ class Config(object):
         parser.add_argument('--ckpt_directory', type=str, default='/data/rohith/captain_cook/checkpoints'
                                                                   '/error_recognition', help='checkpoint directory')
         parser.add_argument('--split', type=str, default='environment', help='split')
+        parser.add_argument('--variant', type=str, default=const.MLP_VARIANT, help='variant')
+        parser.add_argument('--model_name', type=str, default=None, help='model name')
+        parser.add_argument('--task_name', type=str, default=const.ERROR_RECOGNITION, help='task name')
         return parser

@@ -15,6 +15,9 @@ class CaptainCookStepDataset(Dataset):
         self._phase = phase
         self._split = split
 
+        if self._split is None:
+            self._split = "recordings"
+
         assert self._phase in ["train", "val", "test"], f"Invalid phase: {self._phase}"
         self._features_directory = self._config.features_directory
 
