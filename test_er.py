@@ -14,6 +14,9 @@ def test_er(model, device, test_loader, phase, criterion):
     num_batches = len(test_loader)
     test_losses = []
 
+    test_step_start_end_list = []
+    counter = 0
+
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
@@ -21,29 +24,44 @@ def test_er(model, device, test_loader, phase, criterion):
             total_samples += data.shape[0]
             loss = criterion(output, target)
             test_losses.append(loss.item())
-            all_outputs.append(output.sigmoid().detach().cpu().numpy().reshape(-1))
+
+            sigmoid_output = output.sigmoid()
+            all_outputs.append(sigmoid_output.detach().cpu().numpy().reshape(-1))
             all_targets.append(target.detach().cpu().numpy().reshape(-1))
+
+            test_step_start_end_list.append((counter, counter + data.shape[0]))
+            counter += data.shape[0]
 
             # Set the description of the tqdm instance to show the loss
             test_loader.set_description(f'{phase} Progress: {total_samples}/{num_batches}')
-
-    avg_test_loss = np.mean(test_losses)
 
     # Flatten lists
     all_outputs = np.concatenate(all_outputs)
     all_targets = np.concatenate(all_targets)
 
-    # Calculate metrics
-    pred_labels = (all_outputs > 0.5).astype(int)
-    precision = precision_score(all_targets, pred_labels)
-    recall = recall_score(all_targets, pred_labels)
-    f1 = f1_score(all_targets, pred_labels)
-    auc = roc_auc_score(all_targets, all_outputs)
+    # -------------------------- Step Level Metrics --------------------------
+    all_step_targets = []
+    all_step_outputs = []
 
-    # Print results
-    print(
-        f'{phase} set: Average loss: {avg_test_loss:.4f}, Accuracy: {np.sum(pred_labels == all_targets)}/{pred_labels.shape[0]}'
-        f'({100. * np.mean(pred_labels == all_targets):.0f}%)')
+    for start, end in test_step_start_end_list:
+        step_output = all_outputs[start:end]
+        step_target = all_targets[start:end]
+
+        mean_step_output = np.mean(step_output)
+        step_target = 1 if np.mean(step_target) > 0.95 else 0
+
+        all_step_outputs.append(mean_step_output)
+        all_step_targets.append(step_target)
+
+    all_step_outputs = np.array(all_step_outputs)
+    all_step_targets = np.array(all_step_targets)
+
+    # Calculate metrics at the step level
+    pred_step_labels = (all_step_outputs > 0.5).astype(int)
+    precision = precision_score(all_step_targets, pred_step_labels)
+    recall = recall_score(all_step_targets, pred_step_labels)
+    f1 = f1_score(all_step_targets, pred_step_labels)
+    auc = roc_auc_score(all_step_targets, pred_step_labels)
+
     print(f'Precision: {precision:.4f}, Recall: {recall:.4f}, F1-Score: {f1:.4f}, AUC: {auc:.4f}')
-
     return test_losses, precision, recall, f1, auc

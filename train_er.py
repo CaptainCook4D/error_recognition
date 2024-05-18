@@ -18,24 +18,23 @@ def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
 
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
-        # Create constant chunk of data of size 30
-        # Split the data and target into chunks of 30
-        chunk_losses = []
-        for i in range(0, data.shape[1], 10):
-            data_chunk = data[:, i:i + 10, :]
-            target_chunk = target[:, i:i + 10, :]
 
-            # Send to the model and calculate the loss
-            optimizer.zero_grad()
-            output_chunk = model(data_chunk)
-            loss = criterion(output_chunk, target_chunk)
-            chunk_losses.append(loss.item())
-            loss.backward()
-            optimizer.step()
-            train_losses.append(loss.item())
+        # chunk_losses = []
+        # for i in range(0, data.shape[1], 10):
+        #     data_chunk = data[:, i:i + 10, :]
+        #     target_chunk = target[:, i:i + 10, :]
+
+        # Send to the model and calculate the loss
+        optimizer.zero_grad()
+        output_chunk = model(data)
+        loss = criterion(output_chunk, target)
+        # chunk_losses.append(loss.item())
+        loss.backward()
+        optimizer.step()
+        train_losses.append(loss.item())
 
         train_loader.set_description(
-            f'Train Epoch: {epoch}, Progress: {batch_idx}/{num_batches}, Loss: {np.mean(chunk_losses):.6f}'
+            f'Train Epoch: {epoch}, Progress: {batch_idx}/{num_batches}, Loss: {loss.item():.6f}'
         )
 
     return train_losses

@@ -16,6 +16,8 @@ class Config(object):
         self.phase = 'train'
         self.segment_length = 1
         self.features_directory = "/data/rohith/captain_cook/features/gopro/segments"
+        self.ckpt_directory = "/data/rohith/captain_cook/checkpoints/error_recognition"
+        self.split = 'environment'
         self.batch_size = 1
         self.test_batch_size = 1
         self.num_epochs = 100
@@ -54,5 +56,7 @@ class Config(object):
         parser.add_argument('--modality', type=str, default='video', help='modality')
         parser.add_argument('--features_directory', type=str, default='/data/rohith/captain_cook/features/gopro'
                                                                       '/segments', help='features directory')
-
+        parser.add_argument('--ckpt_directory', type=str, default='/data/rohith/captain_cook/checkpoints'
+                                                                  '/error_recognition', help='checkpoint directory')
+        parser.add_argument('--split', type=str, default='environment', help='split')
         return parser
