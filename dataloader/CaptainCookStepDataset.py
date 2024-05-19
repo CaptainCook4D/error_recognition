@@ -80,3 +80,14 @@ class CaptainCookStepDataset(Dataset):
         features_data.close()
 
         return step_features, step_labels
+
+
+def collate_fn(batch):
+    # batch is a list of tuples, and each tuple is (step_features, step_labels)
+    step_features, step_labels = zip(*batch)
+
+    # Stack the step_features and step_labels
+    step_features = torch.cat(step_features, dim=0)
+    step_labels = torch.cat(step_labels, dim=0)
+
+    return step_features, step_labels

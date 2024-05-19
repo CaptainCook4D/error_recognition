@@ -10,6 +10,7 @@ from base import test_er_model, fetch_model, store_model
 from constants import Constants as const
 from core.config import Config
 from dataloader.CaptainCookStepDataset import CaptainCookStepDataset
+from dataloader.CaptainCookStepDataset import collate_fn
 
 
 def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
@@ -21,8 +22,14 @@ def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
-        output_chunk = model(data)
-        loss = criterion(output_chunk, target)
+        output = model(data)
+
+        # positive_weight = target.detach().clone()
+        # negative_weight = 1 - target.detach().clone()
+        #
+        # weight = 0.7 * positive_weight + 0.3 * negative_weight
+
+        loss = criterion(output, target)
         loss.backward()
         optimizer.step()
         train_losses.append(loss.item())
@@ -39,13 +46,13 @@ def train_er(config):
     device = config.device
 
     train_dataset = CaptainCookStepDataset(config, const.TRAIN, config.split)
-    train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=10 * config.batch_size, collate_fn=collate_fn, shuffle=True)
     val_dataset = CaptainCookStepDataset(config, const.VAL, config.split)
     val_loader = DataLoader(val_dataset, batch_size=config.test_batch_size)
 
     model = fetch_model(config)
     optimizer = optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(0.8))
 
     # Initialize variables to track the best model based on the desired metric (e.g., AUC)
     best_model = {'model_state': None, 'metric': 0}

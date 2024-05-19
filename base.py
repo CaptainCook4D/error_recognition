@@ -123,8 +123,8 @@ def test_er_model(model, test_loader, criterion, device, phase):
             all_outputs.append(sigmoid_output.detach().cpu().numpy().reshape(-1))
             all_targets.append(target.detach().cpu().numpy().reshape(-1))
 
-            test_step_start_end_list.append((counter, counter + data.shape[0]))
-            counter += data.shape[0]
+            test_step_start_end_list.append((counter, counter + data.shape[1]))
+            counter += data.shape[1]
 
             # Set the description of the tqdm instance to show the loss
             test_loader.set_description(f'{phase} Progress: {total_samples}/{num_batches}')
@@ -155,14 +155,16 @@ def test_er_model(model, test_loader, criterion, device, phase):
     all_step_targets = []
     all_step_outputs = []
 
+    # threshold_outputs = all_outputs / max_probability
+
     for start, end in test_step_start_end_list:
         step_output = all_outputs[start:end]
         step_target = all_targets[start:end]
 
-        sorted_step_output = np.sort(step_output)
-        # Top 10% of the predictions - 90th percentile
-        threshold = np.percentile(sorted_step_output, 90)
-        step_output = step_output[step_output > threshold]
+        # sorted_step_output = np.sort(step_output)
+        # # Top 10% of the predictions - 90th percentile
+        # threshold = np.percentile(sorted_step_output, 90)
+        # step_output = step_output[step_output > threshold]
         mean_step_output = np.mean(step_output)
         step_target = 1 if np.mean(step_target) > 0.95 else 0
 
@@ -172,12 +174,18 @@ def test_er_model(model, test_loader, criterion, device, phase):
     all_step_outputs = np.array(all_step_outputs)
     all_step_targets = np.array(all_step_targets)
 
+    max_probability = np.max(all_step_outputs)
+    print(f"Max Probability: {max_probability}")
+
+    all_step_outputs = all_step_outputs / max_probability
+
     # Calculate metrics at the step level
     pred_step_labels = (all_step_outputs > 0.5).astype(int)
     precision = precision_score(all_step_targets, pred_step_labels)
     recall = recall_score(all_step_targets, pred_step_labels)
     f1 = f1_score(all_step_targets, pred_step_labels)
-    auc = roc_auc_score(all_step_targets, pred_step_labels)
+
+    auc = roc_auc_score(all_step_targets, all_step_outputs)
 
     step_metrics = {
         const.PRECISION: precision,
