@@ -8,6 +8,7 @@ from core.models.blocks import MLP
 import numpy as np
 import torch
 from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
+from torcheval.metrics.functional import binary_auprc
 from tqdm import tqdm
 
 db_service = FirebaseService()
@@ -123,8 +124,8 @@ def test_er_model(model, test_loader, criterion, device, phase):
             all_outputs.append(sigmoid_output.detach().cpu().numpy().reshape(-1))
             all_targets.append(target.detach().cpu().numpy().reshape(-1))
 
-            test_step_start_end_list.append((counter, counter + data.shape[1]))
-            counter += data.shape[1]
+            test_step_start_end_list.append((counter, counter + data.shape[0]))
+            counter += data.shape[0]
 
             # Set the description of the tqdm instance to show the loss
             test_loader.set_description(f'{phase} Progress: {total_samples}/{num_batches}')
@@ -132,6 +133,9 @@ def test_er_model(model, test_loader, criterion, device, phase):
     # Flatten lists
     all_outputs = np.concatenate(all_outputs)
     all_targets = np.concatenate(all_targets)
+
+    # prob_range = np.max(all_outputs) - np.min(all_outputs)
+    # all_outputs = (all_outputs - np.min(all_outputs)) / prob_range
 
     # ------------------------- Sub-Step Level Metrics -------------------------
     all_sub_step_targets = all_targets.copy()
@@ -143,12 +147,14 @@ def test_er_model(model, test_loader, criterion, device, phase):
     sub_step_recall = recall_score(all_sub_step_targets, pred_sub_step_labels)
     sub_step_f1 = f1_score(all_sub_step_targets, pred_sub_step_labels)
     sub_step_auc = roc_auc_score(all_sub_step_targets, all_sub_step_outputs)
+    sub_step_pr_auc = binary_auprc(torch.tensor(pred_sub_step_labels), torch.tensor(all_sub_step_targets))
 
     sub_step_metrics = {
         const.PRECISION: sub_step_precision,
         const.RECALL: sub_step_recall,
         const.F1: sub_step_f1,
-        const.AUC: sub_step_auc
+        const.AUC: sub_step_auc,
+        const.PR_AUC: sub_step_pr_auc
     }
 
     # -------------------------- Step Level Metrics --------------------------
@@ -174,11 +180,6 @@ def test_er_model(model, test_loader, criterion, device, phase):
     all_step_outputs = np.array(all_step_outputs)
     all_step_targets = np.array(all_step_targets)
 
-    max_probability = np.max(all_step_outputs)
-    print(f"Max Probability: {max_probability}")
-
-    all_step_outputs = all_step_outputs / max_probability
-
     # Calculate metrics at the step level
     pred_step_labels = (all_step_outputs > 0.5).astype(int)
     precision = precision_score(all_step_targets, pred_step_labels)
@@ -186,15 +187,19 @@ def test_er_model(model, test_loader, criterion, device, phase):
     f1 = f1_score(all_step_targets, pred_step_labels)
 
     auc = roc_auc_score(all_step_targets, all_step_outputs)
+    pr_auc = binary_auprc(torch.tensor(pred_step_labels), torch.tensor(all_step_targets))
 
     step_metrics = {
         const.PRECISION: precision,
         const.RECALL: recall,
         const.F1: f1,
-        const.AUC: auc
+        const.AUC: auc,
+        const.PR_AUC: pr_auc
     }
 
     # Print step level metrics
+    print("----------------------------------------------------------------")
+    print(f'Sub Step Level Metrics: {sub_step_metrics}')
     print(f"Step Level Metrics: {step_metrics}")
 
     return test_losses, sub_step_metrics, step_metrics

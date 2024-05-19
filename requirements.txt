@@ -10,6 +10,7 @@ loguru
 matplotlib
 seaborn
 wandb
+torcheval
 
 pyrebase4
 yacs

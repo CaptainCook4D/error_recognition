@@ -11,6 +11,7 @@ from constants import Constants as const
 from core.config import Config
 from dataloader.CaptainCookStepDataset import CaptainCookStepDataset
 from dataloader.CaptainCookStepDataset import collate_fn
+from dataloader.CaptainCookSubStepDataset import CaptainCookSubStepDataset
 
 
 def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
@@ -23,12 +24,6 @@ def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-
-        # positive_weight = target.detach().clone()
-        # negative_weight = 1 - target.detach().clone()
-        #
-        # weight = 0.7 * positive_weight + 0.3 * negative_weight
-
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
@@ -41,19 +36,11 @@ def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
     return train_losses
 
 
-def train_er(config):
-    torch.manual_seed(config.seed)
-    device = config.device
-
-    train_dataset = CaptainCookStepDataset(config, const.TRAIN, config.split)
-    train_loader = DataLoader(train_dataset, batch_size=10 * config.batch_size, collate_fn=collate_fn, shuffle=True)
-    val_dataset = CaptainCookStepDataset(config, const.VAL, config.split)
-    val_loader = DataLoader(val_dataset, batch_size=config.test_batch_size)
-
+def train_er_model(train_loader, val_loader, device, config):
     model = fetch_model(config)
     optimizer = optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
-    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(0.8))
-
+    # criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([1.5], dtype=torch.float32).to(device))
+    criterion = nn.BCEWithLogitsLoss()
     # Initialize variables to track the best model based on the desired metric (e.g., AUC)
     best_model = {'model_state': None, 'metric': 0}
 
@@ -102,6 +89,56 @@ def train_er(config):
             store_model(model, config, ckpt_name=f"{model_name}_best.pt")
 
 
+def train_sub_step_test_step_er(config):
+    torch.manual_seed(config.seed)
+    device = config.device
+
+    cuda_kwargs = {
+        "num_workers": 8,
+        "pin_memory": False,
+    }
+    train_kwargs = {**cuda_kwargs, "shuffle": True, "batch_size": 1024}
+    test_kwargs = {**cuda_kwargs, "shuffle": False, "batch_size": 1}
+
+    train_dataset = CaptainCookSubStepDataset(config, const.TRAIN, config.split)
+    train_loader = DataLoader(train_dataset, collate_fn=collate_fn, **train_kwargs)
+    val_dataset = CaptainCookStepDataset(config, const.TEST, config.split)
+    val_loader = DataLoader(val_dataset, collate_fn=collate_fn, **test_kwargs)
+
+    print("-------------------------------------------------------------")
+    print(f"Train args: {train_kwargs}")
+    print(f"Test args: {test_kwargs}")
+    print(f"Split: {config.split}")
+    print("-------------------------------------------------------------")
+
+    train_er_model(train_loader, val_loader, device, config)
+
+
+def train_step_test_step_er(config):
+    torch.manual_seed(config.seed)
+    device = config.device
+
+    cuda_kwargs = {
+        "num_workers": 8,
+        "pin_memory": True,
+    }
+    train_kwargs = {**cuda_kwargs, "shuffle": True, "batch_size": 10}
+    test_kwargs = {**cuda_kwargs, "shuffle": False, "batch_size": 1}
+
+    print("-------------------------------------------------------------")
+    print(f"Train args: {train_kwargs}")
+    print(f"Test args: {test_kwargs}")
+    print(f"Split: {config.split}")
+    print("-------------------------------------------------------------")
+
+    train_dataset = CaptainCookStepDataset(config, const.TRAIN, config.split)
+    train_loader = DataLoader(train_dataset, collate_fn=collate_fn, **train_kwargs)
+    val_dataset = CaptainCookStepDataset(config, const.TEST, config.split)
+    val_loader = DataLoader(val_dataset, collate_fn=collate_fn, **test_kwargs)
+
+    train_er_model(train_loader, val_loader, device, config)
+
+
 if __name__ == "__main__":
     conf = Config()
-    train_er(conf)
+    train_step_test_step_er(conf)

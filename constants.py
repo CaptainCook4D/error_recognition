@@ -11,6 +11,7 @@ class Constants:
     RECALL = "recall"
     F1 = "f1"
     AUC = "auc"
+    PR_AUC = "pr_auc"
 
     STEP_METRICS = "step_metrics"
     SUB_STEP_METRICS = "sub_step_metrics"

@@ -22,7 +22,7 @@ class Config(object):
         self.batch_size = 1
         self.test_batch_size = 1
         self.num_epochs = 100
-        self.lr = 1e-4
+        self.lr = 1e-3
         self.weight_decay = 1e-3
         self.log_interval = 5
         self.dry_run = False
@@ -65,7 +65,7 @@ class Config(object):
                                                                       '/segments', help='features directory')
         parser.add_argument('--ckpt_directory', type=str, default='/data/rohith/captain_cook/checkpoints'
                                                                   '/error_recognition', help='checkpoint directory')
-        parser.add_argument('--split', type=str, default='environment', help='split')
+        parser.add_argument('--split', type=str, default='recordings', help='split')
         parser.add_argument('--variant', type=str, default=const.MLP_VARIANT, help='variant')
         parser.add_argument('--model_name', type=str, default=None, help='model name')
         parser.add_argument('--task_name', type=str, default=const.ERROR_RECOGNITION, help='task name')
