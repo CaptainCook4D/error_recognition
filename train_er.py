@@ -2,12 +2,14 @@ import os
 
 import torch
 import torch.optim as optim
+import wandb
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from base import test_er_model, store_model, fetch_model
 from constants import Constants as const
 from core.config import Config
+from core.utils import init_logger_and_wandb
 from dataloader.CaptainCookStepDataset import CaptainCookStepDataset
 from dataloader.CaptainCookStepDataset import collate_fn
 from dataloader.CaptainCookStepShuffleDataset import CaptainCookStepShuffleDataset
@@ -66,7 +68,8 @@ def train_er_model(train_loader, val_loader, device, config, test_loader=None):
                                                                                       device, phase='test')
 
             avg_train_loss = sum(train_losses) / len(train_losses)
-            avg_test_loss = sum(val_losses) / len(val_losses)
+            avg_val_loss = sum(val_losses) / len(val_losses)
+            avg_test_loss = sum(test_losses) / len(test_losses)
 
             precision = step_metrics['precision']
             recall = step_metrics['recall']
@@ -75,7 +78,24 @@ def train_er_model(train_loader, val_loader, device, config, test_loader=None):
 
             # Write losses and metrics to file
             f.write(
-                f'{epoch}, {avg_train_loss:.6f}, {avg_test_loss:.6f}, {precision:.6f}, {recall:.6f}, {f1:.6f}, {auc:.6f}\n')
+                f'{epoch}, {avg_train_loss:.6f}, {avg_val_loss:.6f}, {avg_test_loss:.6f}, {precision:.6f}, {recall:.6f}, {f1:.6f}, {auc:.6f}\n')
+
+            running_metrics = {
+                "epoch": epoch,
+                "train_loss": avg_train_loss,
+                "test_loss": avg_test_loss,
+                "val_loss": avg_val_loss,
+                "val_metrics" : {
+                    "step_metrics": step_metrics,
+                    "sub_step_metrics": sub_step_metrics
+                },
+                "test_metrics": {
+                    "step_metrics": test_step_metrics,
+                    "sub_step_metrics": test_sub_step_metrics
+                }
+            }
+
+            wandb.log(running_metrics)
 
             print(f'Epoch: {epoch}, Train Loss: {avg_train_loss:.6f}, Test Loss: {avg_test_loss:.6f}, '
                   f'Precision: {precision:.6f}, Recall: {recall:.6f}, F1: {f1:.6f}, AUC: {auc:.6f}')
@@ -134,9 +154,7 @@ def train_step_test_step_er(config):
     print("Training step model and testing on step level")
     print(f"Train args: {train_kwargs}")
     print(f"Test args: {test_kwargs}")
-
     print(config.args)
-
     print("-------------------------------------------------------------")
 
     # train_dataset = CaptainCookStepDataset(config, const.TRAIN, config.split)
@@ -156,4 +174,6 @@ def train_step_test_step_er(config):
 
 if __name__ == "__main__":
     conf = Config()
+    init_logger_and_wandb(conf)
     train_step_test_step_er(conf)
+    wandb.finish()
