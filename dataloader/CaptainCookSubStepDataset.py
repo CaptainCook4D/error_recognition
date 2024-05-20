@@ -19,7 +19,7 @@ class CaptainCookSubStepDataset(Dataset):
             self._split = "recordings"
 
         assert self._phase in ["train", "val", "test"], f"Invalid phase: {self._phase}"
-        self._features_directory = self._config.features_directory
+        self._features_directory = self._config.video_features_directory
 
         self._recording_ids_file = f"{self._split}_data_split_combined.json"
 

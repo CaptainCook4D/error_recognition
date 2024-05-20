@@ -2,9 +2,6 @@ from argparse import ArgumentParser
 from constants import Constants as const
 
 
-# TODO: Finish all the configuration parameters.
-# Use this as source for training the model
-
 class Config(object):
     """Wrapper class for model hyperparameters."""
 
@@ -16,7 +13,12 @@ class Config(object):
         self.modality = 'video'
         self.phase = 'train'
         self.segment_length = 1
-        self.features_directory = "/data/rohith/captain_cook/features/gopro/segments"
+
+        self.video_features_directory = "/data/rohith/captain_cook/features/gopro/segments"
+        self.audio_features_directory = "/data/rohith/captain_cook/features/gopro/audios"
+        self.text_features_directory = "/data/rohith/captain_cook/features/gopro/texts"
+        self.depth_features_directory = "/data/rohith/captain_cook/features/gopro/depths"
+
         self.ckpt_directory = "/data/rohith/captain_cook/checkpoints/"
         self.split = 'recordings'
         self.batch_size = 1
@@ -34,13 +36,18 @@ class Config(object):
         self.model_name = None
         self.task_name = const.ERROR_RECOGNITION
 
+        self.model_name = None
+
         self.parser = self.setup_parser()
         self.args = vars(self.parser.parse_args())
         self.save_model = True
         self.__dict__.update(self.args)
 
-        if self.model_name is None:
-            self.model_name = f"{self.task_name}_{self.variant}_{self.backbone}_{self.split}"
+        if self.backbone == const.IMAGEBIND:
+            if self.modality is None:
+                self.modality = [const.VIDEO, const.AUDIO, const.TEXT, const.DEPTH]
+        else:
+            self.modality = [const.VIDEO]
 
     def setup_parser(self):
         """
@@ -62,13 +69,18 @@ class Config(object):
         parser.add_argument('--ckpt', type=str, default=None, help='checkpoint path')
         parser.add_argument('--seed', type=int, default=42, help='random seed (default: 1000)')
 
-        parser.add_argument('--backbone', type=str, default=const.RESNET3D, help='backbone model')
-        parser.add_argument('--modality', type=str, default='video', help='modality')
+        parser.add_argument('--backbone', type=str, default=const.IMAGEBIND, help='backbone model')
         parser.add_argument('--features_directory', type=str, default='/data/rohith/captain_cook/features/gopro'
                                                                       '/segments', help='features directory')
-        parser.add_argument('--ckpt_directory', type=str, default='/data/rohith/captain_cook/checkpoints', help='checkpoint directory')
+        parser.add_argument('--ckpt_directory', type=str, default='/data/rohith/captain_cook/checkpoints',
+                            help='checkpoint directory')
         parser.add_argument('--split', type=str, default=const.RECORDINGS_SPLIT, help='split')
         parser.add_argument('--variant', type=str, default=const.MLP_VARIANT, help='variant')
         parser.add_argument('--model_name', type=str, default=None, help='model name')
         parser.add_argument('--task_name', type=str, default=const.ERROR_RECOGNITION, help='task name')
+        parser.add_argument('--modality', type=str, default=[const.VIDEO], help='audio')
+
         return parser
+
+    def set_model_name(self, model_name):
+        self.model_name = model_name

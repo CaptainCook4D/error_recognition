@@ -52,3 +52,8 @@ class Constants:
 
     # ----------------------- WANDB CONSTANTS -----------------------
     WANDB_PROJECT = "error_recognition"
+
+    AUDIO = "audio"
+    VIDEO = "video"
+    TEXT = "text"
+    DEPTH = "depth"

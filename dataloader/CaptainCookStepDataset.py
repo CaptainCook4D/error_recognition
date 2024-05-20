@@ -16,6 +16,12 @@ class CaptainCookStepDataset(Dataset):
         self._phase = phase
         self._split = split
 
+        # Shall be activated only for IMAGEBIND
+        # Modality is a list [Depth, Audio, Text, Video]
+        self._modality = config.modality
+        if len(self._modality) > 1:
+            assert self._backbone == const.IMAGEBIND, f"Invalid backbone for modality: {self._modality}"
+
         with open('../annotations/annotation_json/step_annotations.json', 'r') as f:
             self._annotations = json.load(f)
 
@@ -23,7 +29,7 @@ class CaptainCookStepDataset(Dataset):
 
         assert self._phase in ["train", "val", "test"], f"Invalid phase: {self._phase}"
 
-        self._features_directory = self._config.features_directory
+        self._features_directory = self._config.video_features_directory
 
         if self._split == const.STEP_SPLIT:
             self._init_step_split(config, phase)
@@ -151,14 +157,7 @@ class CaptainCookStepDataset(Dataset):
         assert len(self._step_dict) > 0, "No data found in the dataset"
         return len(self._step_dict)
 
-    def __getitem__(self, idx):
-        recording_id = self._step_dict[idx][0]
-        step_start_end_list = self._step_dict[idx][1]
-
-        features_path = os.path.join(self._features_directory, self._backbone, f'{recording_id}_360p.mp4_1s_1s.npz')
-        features_data = np.load(features_path)
-        recording_features = features_data['arr_0']
-
+    def _build_modality_step_features_labels(self, recording_features, step_start_end_list):
         # Build step features by concatenating the features of the step from the list
         step_features = []
         step_has_errors = None
@@ -175,7 +174,112 @@ class CaptainCookStepDataset(Dataset):
         else:
             step_labels = torch.zeros(N, 1)
 
+        return step_features, step_labels
+
+    @staticmethod
+    # Filename should be AUDIO: {recording_id}.wav.npz, VIDEO: {recording_id}_360p.mp4.npz
+    def fetch_imagebind_data(data, filename):
+        numpy_data = np.frombuffer(data[f"{filename}"], dtype=np.float32).reshape((-1, 1024))
+        return numpy_data
+
+    def _get_video_features(self, recording_id, step_start_end_list):
+        if self._backbone == const.IMAGEBIND:
+            recording_name = f"{recording_id}_360p.mp4"
+            features_path = os.path.join(self._config.video_features_directory, f"{self._backbone}_2",
+                                         f'{recording_name}.npz')
+            features_data = np.load(features_path)
+            recording_features = self.fetch_imagebind_data(features_data, "video_embeddings")
+        else:
+            features_path = os.path.join(self._config.video_features_directory, self._backbone,
+                                         f'{recording_id}_360p.mp4_1s_1s.npz')
+            features_data = np.load(features_path)
+            recording_features = features_data['arr_0']
+
+        step_features, step_labels = self._build_modality_step_features_labels(recording_features, step_start_end_list)
         features_data.close()
+        return step_features, step_labels
+
+    def _get_audio_features(self, recording_id, step_start_end_list):
+        recording_name = f"{recording_id}.wav"
+        features_path = os.path.join(self._config.audio_features_directory, self._backbone, f'{recording_name}.npz')
+        features_data = np.load(features_path)
+        recording_features = self.fetch_imagebind_data(features_data, recording_name)
+        step_features, step_labels = self._build_modality_step_features_labels(recording_features, step_start_end_list)
+        features_data.close()
+        return step_features, step_labels
+
+    def _get_depth_features(self, recording_id, step_start_end_list):
+        features_path = os.path.join(self._config.depth_features_directory, self._backbone,
+                                     f'{recording_id}_360p.mp4_1s_1s.npz')
+        features_data = np.load(features_path)
+        # TODO: Correct this
+        recording_features = features_data['arr_0']
+        step_features, step_labels = self._build_modality_step_features_labels(recording_features, step_start_end_list)
+        features_data.close()
+        return step_features, step_labels
+
+    def _get_text_features(self, recording_id, step_start_end_list):
+        features_path = os.path.join(self._config.text_features_directory, self._backbone,
+                                     f'{recording_id}_360p.mp4_1s_1s.npz')
+        features_data = np.load(features_path)
+        # TODO: Correct this
+        recording_features = features_data['arr_0']
+        step_features, step_labels = self._build_modality_step_features_labels(recording_features, step_start_end_list)
+        features_data.close()
+        return step_features, step_labels
+
+    def _get_imagebind_features(self, recording_id, step_start_end_list):
+        step_features = []
+        step_labels = []
+
+        # Load video features
+        if const.VIDEO in self._modality:
+            video_step_features, video_step_labels = self._get_video_features(recording_id, step_start_end_list)
+            step_features.append(video_step_features)
+            if len(step_labels) == 0:
+                step_labels = video_step_labels
+
+        # Load audio features
+        if const.AUDIO in self._modality:
+            audio_step_features, audio_step_labels = self._get_audio_features(recording_id, step_start_end_list)
+            step_features.append(audio_step_features)
+            if len(step_labels) == 0:
+                step_labels = audio_step_labels
+
+        # Load text features
+        if const.TEXT in self._modality:
+            text_step_features, text_step_labels = self._get_text_features(recording_id, step_start_end_list)
+            step_features.append(text_step_features)
+            if len(step_labels) == 0:
+                step_labels = text_step_labels
+
+        # Load depth features
+        if const.DEPTH in self._modality:
+            depth_step_features, depth_step_labels = self._get_depth_features(recording_id, step_start_end_list)
+            step_features.append(depth_step_features)
+            if len(step_labels) == 0:
+                step_labels = depth_step_labels
+
+        if len(step_features) > 1:
+            step_features = torch.cat(step_features, dim=1)
+        else:
+            step_features = step_features[0]
+
+        return step_features, step_labels
+
+    def __getitem__(self, idx):
+        recording_id = self._step_dict[idx][0]
+        step_start_end_list = self._step_dict[idx][1]
+
+        step_features = None
+        step_labels = None
+        if self._backbone == const.IMAGEBIND:
+            step_features, step_labels = self._get_imagebind_features(recording_id, step_start_end_list)
+        elif self._backbone in [const.OMNIVORE, const.RESNET3D, const.X3D, const.SLOWFAST]:
+            step_features, step_labels = self._get_video_features(recording_id, step_start_end_list)
+
+        assert step_features is not None, f"Features not found for recording_id: {recording_id}"
+        assert step_labels is not None, f"Labels not found for recording_id: {recording_id}"
 
         return step_features, step_labels
 

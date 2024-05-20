@@ -19,7 +19,7 @@ def fetch_input_dim(config):
         return 400
     elif config.backbone == const.RESNET3D:
         return 400
-    elif config.backbone == const.IMAGEBIND_VIDEO:
+    elif config.backbone == const.IMAGEBIND:
         return 1024
 
 

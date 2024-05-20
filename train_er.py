@@ -6,7 +6,7 @@ import wandb
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from base import test_er_model, store_model, fetch_model
+from base import test_er_model, store_model, fetch_model, fetch_model_name
 from constants import Constants as const
 from core.config import Config
 from core.utils import init_logger_and_wandb
@@ -47,7 +47,8 @@ def train_er_model(train_loader, val_loader, device, config, test_loader=None):
 
     model_name = config.model_name
     if config.model_name is None:
-        model_name = f"{config.task_name}_{config.variant}_{config.backbone}_{config.split}"
+        model_name = fetch_model_name(config)
+        config.model_name = model_name
 
     train_stats_directory = f"stats/{config.task_name}/{config.variant}/{config.backbone}"
     os.makedirs(train_stats_directory, exist_ok=True)
@@ -168,6 +169,6 @@ def train_step_test_step_er(config):
 
 if __name__ == "__main__":
     conf = Config()
-    init_logger_and_wandb(conf)
+    # init_logger_and_wandb(conf)
     train_step_test_step_er(conf)
-    wandb.finish()
+    # wandb.finish()
