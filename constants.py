@@ -29,6 +29,11 @@ class Constants:
     ERROR_CATEGORY_RECOGNITION = "error_category_recognition"
     EARLY_ERROR_RECOGNITION = "early_error_recognition"
 
+    RECORDINGS_SPLIT = "recordings"
+    PERSON_SPLIT = "person"
+    ENVIRONMENT_SPLIT = "environment"
+    STEP_SPLIT = "step"
+
     # --------------------- MODEL SPECIFIC CONSTANTS ---------------------
     OMNIVORE = "omnivore"
     RESNET3D = "3dresnet"

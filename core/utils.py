@@ -8,7 +8,7 @@ from constants import Constants as const
 
 def init_logger_and_wandb(config):
     wandb.init(
-        project=const.ERROR_RECOGNITION,
+        project=config.model_name,
         config=config,
     )
     config = {
