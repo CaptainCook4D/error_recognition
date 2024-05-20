@@ -67,7 +67,7 @@ class Config(object):
         parser.add_argument('--features_directory', type=str, default='/data/rohith/captain_cook/features/gopro'
                                                                       '/segments', help='features directory')
         parser.add_argument('--ckpt_directory', type=str, default='/data/rohith/captain_cook/checkpoints', help='checkpoint directory')
-        parser.add_argument('--split', type=str, default='recordings', help='split')
+        parser.add_argument('--split', type=str, default=const.RECORDINGS_SPLIT, help='split')
         parser.add_argument('--variant', type=str, default=const.MLP_VARIANT, help='variant')
         parser.add_argument('--model_name', type=str, default=None, help='model name')
         parser.add_argument('--task_name', type=str, default=const.ERROR_RECOGNITION, help='task name')

@@ -12,7 +12,6 @@ from core.config import Config
 from core.utils import init_logger_and_wandb
 from dataloader.CaptainCookStepDataset import CaptainCookStepDataset
 from dataloader.CaptainCookStepDataset import collate_fn
-from dataloader.CaptainCookStepShuffleDataset import CaptainCookStepShuffleDataset
 from dataloader.CaptainCookSubStepDataset import CaptainCookSubStepDataset
 
 
@@ -157,11 +156,6 @@ def train_step_test_step_er(config):
     print(config.args)
     print("-------------------------------------------------------------")
 
-    # train_dataset = CaptainCookStepDataset(config, const.TRAIN, config.split)
-    # train_loader = DataLoader(train_dataset, collate_fn=collate_fn, **train_kwargs)
-    # val_dataset = CaptainCookStepDataset(config, const.TEST, config.split)
-    # val_loader = DataLoader(val_dataset, collate_fn=collate_fn, **test_kwargs)
-
     train_dataset = CaptainCookStepDataset(config, const.TRAIN, config.split)
     train_loader = DataLoader(train_dataset, collate_fn=collate_fn, **train_kwargs)
     val_dataset = CaptainCookStepDataset(config, const.VAL, config.split)
@@ -174,6 +168,6 @@ def train_step_test_step_er(config):
 
 if __name__ == "__main__":
     conf = Config()
-    # init_logger_and_wandb(conf)
+    init_logger_and_wandb(conf)
     train_step_test_step_er(conf)
-    # wandb.finish()
+    wandb.finish()
