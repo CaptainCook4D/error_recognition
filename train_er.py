@@ -162,11 +162,11 @@ def train_step_test_step_er(config):
     # val_dataset = CaptainCookStepDataset(config, const.TEST, config.split)
     # val_loader = DataLoader(val_dataset, collate_fn=collate_fn, **test_kwargs)
 
-    train_dataset = CaptainCookStepShuffleDataset(config, const.TRAIN)
+    train_dataset = CaptainCookStepDataset(config, const.TRAIN, config.split)
     train_loader = DataLoader(train_dataset, collate_fn=collate_fn, **train_kwargs)
-    val_dataset = CaptainCookStepShuffleDataset(config, const.VAL)
+    val_dataset = CaptainCookStepDataset(config, const.VAL, config.split)
     val_loader = DataLoader(val_dataset, collate_fn=collate_fn, **test_kwargs)
-    test_dataset = CaptainCookStepShuffleDataset(config, const.TEST)
+    test_dataset = CaptainCookStepDataset(config, const.TEST, config.split)
     test_loader = DataLoader(test_dataset, collate_fn=collate_fn, **test_kwargs)
 
     train_er_model(train_loader, val_loader, device, config, test_loader=test_loader)
@@ -174,6 +174,6 @@ def train_step_test_step_er(config):
 
 if __name__ == "__main__":
     conf = Config()
-    init_logger_and_wandb(conf)
+    # init_logger_and_wandb(conf)
     train_step_test_step_er(conf)
-    wandb.finish()
+    # wandb.finish()
