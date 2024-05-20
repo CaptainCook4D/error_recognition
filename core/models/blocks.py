@@ -3,10 +3,16 @@ import math
 import torch
 import torch.nn as nn
 from torch import Tensor
+from constants import Constants as const
 
 # define the transformer backbone here
 EncoderLayer = nn.TransformerEncoderLayer
 Encoder = nn.TransformerEncoder
+
+
+def fetch_input_dim(config):
+    if config.backbone == const.OMNIVORE:
+        return 1024
 
 
 class MLP(nn.Module):

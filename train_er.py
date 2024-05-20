@@ -5,12 +5,12 @@ import torch.optim as optim
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-
-from base import test_er_model, fetch_model, store_model
+from base import test_er_model, store_model, fetch_model
 from constants import Constants as const
 from core.config import Config
 from dataloader.CaptainCookStepDataset import CaptainCookStepDataset
 from dataloader.CaptainCookStepDataset import collate_fn
+from dataloader.CaptainCookStepShuffleDataset import CaptainCookStepShuffleDataset
 from dataloader.CaptainCookSubStepDataset import CaptainCookSubStepDataset
 
 
@@ -36,17 +36,17 @@ def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
     return train_losses
 
 
-def train_er_model(train_loader, val_loader, device, config):
+def train_er_model(train_loader, val_loader, device, config, test_loader=None):
     model = fetch_model(config)
     optimizer = optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
-    # criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([1.5], dtype=torch.float32).to(device))
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([1.5], dtype=torch.float32).to(device))
+    # criterion = nn.BCEWithLogitsLoss()
     # Initialize variables to track the best model based on the desired metric (e.g., AUC)
     best_model = {'model_state': None, 'metric': 0}
 
     model_name = config.model_name
     if config.model_name is None:
-        model_name = f"{config.task_name}_{config.variant}_{config.backbone}"
+        model_name = f"{config.task_name}_{config.variant}_{config.backbone}_{config.split}"
 
     train_stats_directory = f"stats/{config.task_name}/{config.variant}/{config.backbone}"
     os.makedirs(train_stats_directory, exist_ok=True)
@@ -60,6 +60,10 @@ def train_er_model(train_loader, val_loader, device, config):
             train_losses = train_epoch(model, device, train_loader, optimizer, epoch, criterion)
             val_losses, sub_step_metrics, step_metrics = test_er_model(model, val_loader, criterion, device,
                                                                        phase='val')
+
+            if test_loader is not None:
+                test_losses, test_sub_step_metrics, test_step_metrics = test_er_model(model, test_loader, criterion, device, phase='test')
+
             avg_train_loss = sum(train_losses) / len(train_losses)
             avg_test_loss = sum(val_losses) / len(val_losses)
 
@@ -106,6 +110,7 @@ def train_sub_step_test_step_er(config):
     val_loader = DataLoader(val_dataset, collate_fn=collate_fn, **test_kwargs)
 
     print("-------------------------------------------------------------")
+    print("Training sub-step model and testing on step level")
     print(f"Train args: {train_kwargs}")
     print(f"Test args: {test_kwargs}")
     print(f"Split: {config.split}")
@@ -120,23 +125,31 @@ def train_step_test_step_er(config):
 
     cuda_kwargs = {
         "num_workers": 8,
-        "pin_memory": True,
+        "pin_memory": False,
     }
-    train_kwargs = {**cuda_kwargs, "shuffle": True, "batch_size": 10}
+    train_kwargs = {**cuda_kwargs, "shuffle": True, "batch_size": 1}
     test_kwargs = {**cuda_kwargs, "shuffle": False, "batch_size": 1}
 
     print("-------------------------------------------------------------")
+    print("Training step model and testing on step level")
     print(f"Train args: {train_kwargs}")
     print(f"Test args: {test_kwargs}")
     print(f"Split: {config.split}")
     print("-------------------------------------------------------------")
 
-    train_dataset = CaptainCookStepDataset(config, const.TRAIN, config.split)
-    train_loader = DataLoader(train_dataset, collate_fn=collate_fn, **train_kwargs)
-    val_dataset = CaptainCookStepDataset(config, const.TEST, config.split)
-    val_loader = DataLoader(val_dataset, collate_fn=collate_fn, **test_kwargs)
+    # train_dataset = CaptainCookStepDataset(config, const.TRAIN, config.split)
+    # train_loader = DataLoader(train_dataset, collate_fn=collate_fn, **train_kwargs)
+    # val_dataset = CaptainCookStepDataset(config, const.TEST, config.split)
+    # val_loader = DataLoader(val_dataset, collate_fn=collate_fn, **test_kwargs)
 
-    train_er_model(train_loader, val_loader, device, config)
+    train_dataset = CaptainCookStepShuffleDataset(config, const.TRAIN)
+    train_loader = DataLoader(train_dataset, collate_fn=collate_fn, **train_kwargs)
+    val_dataset = CaptainCookStepShuffleDataset(config, const.VAL)
+    val_loader = DataLoader(val_dataset, collate_fn=collate_fn, **test_kwargs)
+    test_dataset = CaptainCookStepShuffleDataset(config, const.TEST)
+    test_loader = DataLoader(test_dataset, collate_fn=collate_fn, **test_kwargs)
+
+    train_er_model(train_loader, val_loader, device, config, test_loader=test_loader)
 
 
 if __name__ == "__main__":

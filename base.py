@@ -4,19 +4,16 @@ import os
 from analysis.results.FirebaseService import FirebaseService
 from analysis.results.Result import Metrics, ResultDetails, Result
 from constants import Constants as const
-from core.models.blocks import MLP
 import numpy as np
 import torch
 from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
 from torcheval.metrics.functional import binary_auprc
 from tqdm import tqdm
 
+from core.models.blocks import fetch_input_dim, MLP
+from core.models.er_former import ErFormer
+
 db_service = FirebaseService()
-
-
-def fetch_input_dim(config):
-    if config.backbone == const.OMNIVORE:
-        return 1024
 
 
 def fetch_model(config):
@@ -25,6 +22,9 @@ def fetch_model(config):
         if config.backbone in [const.OMNIVORE, const.RESNET3D, const.X3D, const.SLOWFAST]:
             input_dim = fetch_input_dim(config)
             model = MLP(input_dim, 512, 1)
+    elif config.variant == const.TRANSFORMER_VARIANT:
+        if config.backbone in [const.OMNIVORE, const.RESNET3D, const.X3D, const.SLOWFAST]:
+            model = ErFormer(config)
 
     assert model is not None, f"Model not found for variant: {config.variant} and backbone: {config.backbone}"
 
@@ -168,9 +168,18 @@ def test_er_model(model, test_loader, criterion, device, phase):
         step_target = all_targets[start:end]
 
         # sorted_step_output = np.sort(step_output)
-        # # Top 10% of the predictions - 90th percentile
-        # threshold = np.percentile(sorted_step_output, 90)
+        # # Top 50% of the predictions
+        # threshold = np.percentile(sorted_step_output, 50)
         # step_output = step_output[step_output > threshold]
+
+        # pos_output = step_output[step_output > 0.5]
+        # neg_output = step_output[step_output <= 0.5]
+        #
+        # if len(pos_output) > len(neg_output):
+        #     step_output = pos_output
+        # else:
+        #     step_output = neg_output
+
         mean_step_output = np.mean(step_output)
         step_target = 1 if np.mean(step_target) > 0.95 else 0
 
@@ -199,7 +208,8 @@ def test_er_model(model, test_loader, criterion, device, phase):
 
     # Print step level metrics
     print("----------------------------------------------------------------")
-    print(f'Sub Step Level Metrics: {sub_step_metrics}')
-    print(f"Step Level Metrics: {step_metrics}")
+    print(f'{phase} Sub Step Level Metrics: {sub_step_metrics}')
+    print(f"{phase} Step Level Metrics: {step_metrics}")
+    print("----------------------------------------------------------------")
 
     return test_losses, sub_step_metrics, step_metrics

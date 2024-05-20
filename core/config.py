@@ -57,9 +57,9 @@ class Config(object):
         parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
         parser.add_argument('--weight_decay', type=float, default=1e-3, help='weight decay')
         parser.add_argument('--ckpt', type=str, default=None, help='checkpoint path')
-        parser.add_argument('--seed', type=int, default=1000, help='random seed (default: 1000)')
+        parser.add_argument('--seed', type=int, default=42, help='random seed (default: 1000)')
 
-        parser.add_argument('--backbone', type=str, default='omnivore', help='backbone model')
+        parser.add_argument('--backbone', type=str, default=const.OMNIVORE, help='backbone model')
         parser.add_argument('--modality', type=str, default='video', help='modality')
         parser.add_argument('--features_directory', type=str, default='/data/rohith/captain_cook/features/gopro'
                                                                       '/segments', help='features directory')
