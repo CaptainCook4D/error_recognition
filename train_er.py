@@ -62,7 +62,8 @@ def train_er_model(train_loader, val_loader, device, config, test_loader=None):
                                                                        phase='val')
 
             if test_loader is not None:
-                test_losses, test_sub_step_metrics, test_step_metrics = test_er_model(model, test_loader, criterion, device, phase='test')
+                test_losses, test_sub_step_metrics, test_step_metrics = test_er_model(model, test_loader, criterion,
+                                                                                      device, phase='test')
 
             avg_train_loss = sum(train_losses) / len(train_losses)
             avg_test_loss = sum(val_losses) / len(val_losses)
@@ -84,8 +85,7 @@ def train_er_model(train_loader, val_loader, device, config, test_loader=None):
                 best_model['metric'] = auc
                 best_model['model_state'] = model.state_dict()
 
-            if epoch % 10 == 0 and config.save_model:
-                store_model(model, config, ckpt_name=f"{model_name}_epoch_{epoch}.pt")
+            store_model(model, config, ckpt_name=f"{model_name}_epoch_{epoch}.pt")
 
         # Save the best model
         if best_model['model_state'] is not None:

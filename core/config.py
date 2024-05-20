@@ -17,11 +17,11 @@ class Config(object):
         self.phase = 'train'
         self.segment_length = 1
         self.features_directory = "/data/rohith/captain_cook/features/gopro/segments"
-        self.ckpt_directory = "/data/rohith/captain_cook/checkpoints/error_recognition"
+        self.ckpt_directory = "/data/rohith/captain_cook/checkpoints/"
         self.split = 'recordings'
         self.batch_size = 1
         self.test_batch_size = 1
-        self.num_epochs = 100
+        self.num_epochs = 50
         self.lr = 1e-3
         self.weight_decay = 1e-3
         self.log_interval = 5
@@ -53,7 +53,7 @@ class Config(object):
         parser.add_argument('--batch_size', type=int, default=1, help='batch size')
         parser.add_argument('--test-batch-size', type=int, default=1,
                             help='input batch size for testing (default: 1000)')
-        parser.add_argument('--num_epochs', type=int, default=100, help='number of epochs')
+        parser.add_argument('--num_epochs', type=int, default=50, help='number of epochs')
         parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
         parser.add_argument('--weight_decay', type=float, default=1e-3, help='weight decay')
         parser.add_argument('--ckpt', type=str, default=None, help='checkpoint path')

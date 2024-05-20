@@ -90,6 +90,12 @@ def store_model(model, config, ckpt_name: str):
     task_directory = os.path.join(config.ckpt_directory, config.task_name)
     os.makedirs(task_directory, exist_ok=True)
 
+    variant_directory = os.path.join(task_directory, config.variant)
+    os.makedirs(variant_directory, exist_ok=True)
+
+    backbone_directory = os.path.join(variant_directory, config.backbone)
+    os.makedirs(backbone_directory, exist_ok=True)
+
     ckpt_file_path = os.path.join(task_directory, ckpt_name)
     torch.save(model.state_dict(), ckpt_file_path)
 
