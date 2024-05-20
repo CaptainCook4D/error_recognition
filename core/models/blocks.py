@@ -13,6 +13,14 @@ Encoder = nn.TransformerEncoder
 def fetch_input_dim(config):
     if config.backbone == const.OMNIVORE:
         return 1024
+    elif config.backbone == const.SLOWFAST:
+        return 400
+    elif config.backbone == const.X3D:
+        return 400
+    elif config.backbone == const.RESNET3D:
+        return 400
+    elif config.backbone == const.IMAGEBIND_VIDEO:
+        return 1024
 
 
 class MLP(nn.Module):

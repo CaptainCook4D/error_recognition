@@ -59,7 +59,7 @@ class Config(object):
         parser.add_argument('--ckpt', type=str, default=None, help='checkpoint path')
         parser.add_argument('--seed', type=int, default=42, help='random seed (default: 1000)')
 
-        parser.add_argument('--backbone', type=str, default=const.OMNIVORE, help='backbone model')
+        parser.add_argument('--backbone', type=str, default=const.RESNET3D, help='backbone model')
         parser.add_argument('--modality', type=str, default='video', help='modality')
         parser.add_argument('--features_directory', type=str, default='/data/rohith/captain_cook/features/gopro'
                                                                       '/segments', help='features directory')

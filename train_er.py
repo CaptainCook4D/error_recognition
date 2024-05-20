@@ -134,7 +134,9 @@ def train_step_test_step_er(config):
     print("Training step model and testing on step level")
     print(f"Train args: {train_kwargs}")
     print(f"Test args: {test_kwargs}")
-    print(f"Split: {config.split}")
+
+    print(config.args)
+
     print("-------------------------------------------------------------")
 
     # train_dataset = CaptainCookStepDataset(config, const.TRAIN, config.split)

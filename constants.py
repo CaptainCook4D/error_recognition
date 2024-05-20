@@ -36,6 +36,11 @@ class Constants:
     SLOWFAST = "slowfast"
     IMAGEBIND = "imagebind"
 
+    IMAGEBIND_VIDEO = "imagebind_video"
+    IMAGEBIND_AUDIO = "imagebind_audio"
+    IMAGEBIND_TEXT = "imagebind_text"
+    IMAGEBIND_DEPTH = "imagebind_depth"
+
     MLP_VARIANT = "MLP"
     TRANSFORMER_VARIANT = "Transformer"
     MULTIMODAL_VARIANT = "Multimodal"
