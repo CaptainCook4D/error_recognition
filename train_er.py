@@ -27,13 +27,12 @@ def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
         output = model(data)
         loss = criterion(output, target)
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Gradient clipping
         optimizer.step()
         train_losses.append(loss.item())
-
         train_loader.set_description(
             f'Train Epoch: {epoch}, Progress: {batch_idx}/{num_batches}, Loss: {loss.item():.6f}'
         )
-
     return train_losses
 
 
@@ -65,7 +64,8 @@ def train_er_model(train_loader, val_loader, device, config, test_loader=None):
 
             if test_loader is not None:
                 test_losses, test_sub_step_metrics, test_step_metrics = test_er_model(model, test_loader, criterion,
-                                                                                      device, phase='test')
+                                                                                      device,
+                                                                                      phase='test')
 
             avg_train_loss = sum(train_losses) / len(train_losses)
             avg_val_loss = sum(val_losses) / len(val_losses)
@@ -85,7 +85,7 @@ def train_er_model(train_loader, val_loader, device, config, test_loader=None):
                 "train_loss": avg_train_loss,
                 "test_loss": avg_test_loss,
                 "val_loss": avg_val_loss,
-                "val_metrics" : {
+                "val_metrics": {
                     "step_metrics": step_metrics,
                     "sub_step_metrics": sub_step_metrics
                 },
@@ -118,7 +118,7 @@ def train_sub_step_test_step_er(config):
     device = config.device
 
     cuda_kwargs = {
-        "num_workers": 8,
+        "num_workers": 1,
         "pin_memory": False,
     }
     train_kwargs = {**cuda_kwargs, "shuffle": True, "batch_size": 1024}
@@ -169,6 +169,9 @@ def train_step_test_step_er(config):
 
 if __name__ == "__main__":
     conf = Config()
-    # init_logger_and_wandb(conf)
+    if conf.model_name is None:
+        m_name = fetch_model_name(conf)
+        conf.model_name = m_name
+    init_logger_and_wandb(conf)
     train_step_test_step_er(conf)
-    # wandb.finish()
+    wandb.finish()

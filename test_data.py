@@ -28,6 +28,22 @@ def load_video_embeddings(video_feature_path):
     video_numpy_data = video_data["video_embeddings"]
     return video_numpy_data
 
+def load_audio_embeddings(audio_feature_path):
+    audio_data = np.load(audio_feature_path)
+    audio_numpy_data = audio_data["video_embeddings"]
+    return audio_numpy_data
+
+
+def test_imagebind():
+    recording_id = "29_49"
+    video_features_path = f"/data/rohith/captain_cook/features/gopro/segments/imagebind_2/{recording_id}_360p.mp4.npz"
+    video_features = load_video_embeddings(video_features_path)
+
+    audio_features_path = f"/data/rohith/captain_cook/features/gopro/audios/imagebind/{recording_id}.wav.npz"
+    audio_features = load_audio_embeddings(audio_features_path)
+
+    return video_features, audio_features
+
 
 def test_npz():
     import numpy as np
@@ -100,4 +116,4 @@ def compare_old_new():
 
 
 if __name__ == "__main__":
-    compare_old_new()
+    test_imagebind()

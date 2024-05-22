@@ -51,6 +51,9 @@ class CaptainCookStepDataset(Dataset):
         self._step_dict = {}
         step_index_id = 0
         for recording_id in self._recording_ids:
+            if recording_id == '12_6' and self._backbone == const.IMAGEBIND:
+                # Skip this recording as it has no features
+                continue
             self._normal_step_dict = {}
             self._error_step_dict = {}
             normal_index_id = 0
@@ -63,8 +66,11 @@ class CaptainCookStepDataset(Dataset):
                     continue
                 if recording_step_dictionary.get(step['step_id']) is None:
                     recording_step_dictionary[step['step_id']] = []
-
-                recording_step_dictionary[step['step_id']].append(
+                if self._backbone == const.IMAGEBIND:
+                    recording_step_dictionary[step['step_id']].append(
+                        (math.floor(step['start_time']/2), math.ceil(step['end_time']/2), step['has_errors']))
+                else:
+                    recording_step_dictionary[step['step_id']].append(
                     (math.floor(step['start_time']), math.ceil(step['end_time']), step['has_errors']))
 
             # 2. Add step start and end time list to the step_dict
@@ -136,6 +142,9 @@ class CaptainCookStepDataset(Dataset):
         self._step_dict = {}
         index_id = 0
         for recording in self._recording_ids:
+            if recording == '12_6' and self._backbone == const.IMAGEBIND:
+                # Skip this recording as it has no features
+                continue
             # 1. Prepare step_id, list(<start, end>) for the recording_id
             recording_step_dictionary = {}
             for step in self._annotations[recording]['steps']:
@@ -145,7 +154,11 @@ class CaptainCookStepDataset(Dataset):
                 if recording_step_dictionary.get(step['step_id']) is None:
                     recording_step_dictionary[step['step_id']] = []
 
-                recording_step_dictionary[step['step_id']].append(
+                if self._backbone == const.IMAGEBIND:
+                    recording_step_dictionary[step['step_id']].append(
+                        (math.floor(step['start_time']/2), math.ceil(step['end_time']/2), step['has_errors']))
+                else:
+                    recording_step_dictionary[step['step_id']].append(
                     (math.floor(step['start_time']), math.ceil(step['end_time']), step['has_errors']))
 
             # 2. Add step start and end time list to the step_dict
@@ -203,7 +216,7 @@ class CaptainCookStepDataset(Dataset):
         recording_name = f"{recording_id}.wav"
         features_path = os.path.join(self._config.audio_features_directory, self._backbone, f'{recording_name}.npz')
         features_data = np.load(features_path)
-        recording_features = self.fetch_imagebind_data(features_data, recording_name)
+        recording_features = self.fetch_imagebind_data(features_data, "video_embeddings")
         step_features, step_labels = self._build_modality_step_features_labels(recording_features, step_start_end_list)
         features_data.close()
         return step_features, step_labels
@@ -261,7 +274,7 @@ class CaptainCookStepDataset(Dataset):
                 step_labels = depth_step_labels
 
         if len(step_features) > 1:
-            step_features = torch.cat(step_features, dim=1)
+            step_features = torch.cat(step_features, dim=-1)
         else:
             step_features = step_features[0]
 
@@ -269,6 +282,7 @@ class CaptainCookStepDataset(Dataset):
 
     def __getitem__(self, idx):
         recording_id = self._step_dict[idx][0]
+        # print(f"Recording ID: {recording_id}")
         step_start_end_list = self._step_dict[idx][1]
 
         step_features = None

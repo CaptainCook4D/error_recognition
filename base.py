@@ -151,9 +151,6 @@ def test_er_model(model, test_loader, criterion, device, phase):
     all_outputs = np.concatenate(all_outputs)
     all_targets = np.concatenate(all_targets)
 
-    # prob_range = np.max(all_outputs) - np.min(all_outputs)
-    # all_outputs = (all_outputs - np.min(all_outputs)) / prob_range
-
     # ------------------------- Sub-Step Level Metrics -------------------------
     all_sub_step_targets = all_targets.copy()
     all_sub_step_outputs = all_outputs.copy()
@@ -196,6 +193,10 @@ def test_er_model(model, test_loader, criterion, device, phase):
         #     step_output = pos_output
         # else:
         #     step_output = neg_output
+
+        # Scale the output to [0, 1]
+        prob_range = np.max(step_output) - np.min(step_output)
+        step_output = (step_output - np.min(step_output)) / prob_range
 
         mean_step_output = np.mean(step_output)
         step_target = 1 if np.mean(step_target) > 0.95 else 0

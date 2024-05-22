@@ -10,7 +10,7 @@ EncoderLayer = nn.TransformerEncoderLayer
 Encoder = nn.TransformerEncoder
 
 
-def fetch_input_dim(config):
+def fetch_input_dim(config, decoder=False):
     if config.backbone == const.OMNIVORE:
         return 1024
     elif config.backbone == const.SLOWFAST:
@@ -20,7 +20,11 @@ def fetch_input_dim(config):
     elif config.backbone == const.RESNET3D:
         return 400
     elif config.backbone == const.IMAGEBIND:
-        return 1024
+        if decoder is True:
+            return 1024
+        k = len(config.modality)
+        return 1024 * k
+
 
 
 class MLP(nn.Module):
