@@ -4,13 +4,13 @@ from loguru import logger
 from constants import Constants as const
 
 firebaseProdConfig = {
-	"apiKey": "AIzaSyCyn-mmp-ZLkk2wEKLjEE9gxm7a8Ewx7bw",
-	"authDomain": "robsgg-e1f74.firebaseapp.com",
-	"databaseURL": "https://robsgg-e1f74-default-rtdb.firebaseio.com",
-	"projectId": "robsgg-e1f74",
-	"storageBucket": "robsgg-e1f74.appspot.com",
-	"messagingSenderId": "223334572997",
-	"appId": "1:223334572997:web:b33fbc61caa53af345a1ac"
+	"apiKey": "AIzaSyDtk0iVz6h800KpsEHGqGtnWvCdqfnQLsk",
+	"authDomain": "captaincook-566a5.firebaseapp.com",
+	"databaseURL": "https://captaincook-566a5-default-rtdb.firebaseio.com",
+	"projectId": "captaincook-566a5",
+	"storageBucket": "captaincook-566a5.appspot.com",
+	"messagingSenderId": "644085661673",
+	"appId": "1:644085661673:web:297e2e2082e9f2b07c1578"
 }
 
 firebase = pyrebase.initialize_app(firebaseProdConfig)
