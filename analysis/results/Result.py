@@ -30,6 +30,14 @@ class Metrics:
             auc=metrics_dict[const.AUC]
         )
 
+    def to_dict(self) -> Dict:
+        return {
+            const.ACCURACY: self.accuracy,
+            const.PRECISION: self.precision,
+            const.RECALL: self.recall,
+            const.F1: self.f1,
+            const.AUC: self.auc
+        }
 
 class ResultDetails:
 
@@ -83,6 +91,8 @@ class Result:
             task_name,
             variant,
             backbone,
+            modality,
+            split,
             model_name=None,
             result_id=None
     ):
@@ -94,11 +104,13 @@ class Result:
         self.task_name = task_name
         self.variant = variant
         self.backbone = backbone
+        self.modality = modality
+        self.split = split
         self.model_name = model_name
         self.result_id = result_id
 
         if self.model_name is None:
-            self.model_name = f"{self.task_name}_{self.variant}_{self.backbone}"
+            self.model_name = f"{self.task_name}_{self.variant}_{self.backbone}_{self.modality}_{self.split}"
 
         # Specific Attributes
         self.best_model_type = None
@@ -122,6 +134,8 @@ class Result:
             const.VARIANT: self.variant,
             const.MODEL_NAME: self.model_name,
             const.BACKBONE: self.backbone,
+            const.SPLIT: self.split,
+            const.MODALITY: self.modality,
             const.RESULT_ID: self.result_id,
             const.DATE: self.result_date
         }
@@ -141,6 +155,8 @@ class Result:
             task_name=result_dict[const.TASK_NAME],
             variant=result_dict[const.VARIANT],
             backbone=result_dict[const.BACKBONE],
+            modality=result_dict[const.MODALITY],
+            split=result_dict[const.SPLIT],
             model_name=result_dict[const.MODEL_NAME],
             result_id=result_dict[const.RESULT_ID]
         )

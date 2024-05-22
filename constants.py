@@ -20,6 +20,8 @@ class Constants:
     VARIANT = "variant"
     MODEL_NAME = "model_name"
     BACKBONE = "backbone"
+    MODALITY = "modality"
+    SPLIT = "split"
 
     TRAIN = "train"
     VAL = "val"

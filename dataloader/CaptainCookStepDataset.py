@@ -19,7 +19,7 @@ class CaptainCookStepDataset(Dataset):
         # Shall be activated only for IMAGEBIND
         # Modality is a list [Depth, Audio, Text, Video]
         self._modality = config.modality
-        if len(self._modality) > 1:
+        if isinstance(config.modality, list) and len(self._modality) > 1:
             assert self._backbone == const.IMAGEBIND, f"Invalid backbone for modality: {self._modality}"
 
         with open('../annotations/annotation_json/step_annotations.json', 'r') as f:
@@ -282,7 +282,6 @@ class CaptainCookStepDataset(Dataset):
 
     def __getitem__(self, idx):
         recording_id = self._step_dict[idx][0]
-        # print(f"Recording ID: {recording_id}")
         step_start_end_list = self._step_dict[idx][1]
 
         step_features = None

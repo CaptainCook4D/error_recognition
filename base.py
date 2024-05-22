@@ -6,7 +6,7 @@ from analysis.results.Result import Metrics, ResultDetails, Result
 from constants import Constants as const
 import numpy as np
 import torch
-from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, accuracy_score
 from torcheval.metrics.functional import binary_auprc
 from tqdm import tqdm
 
@@ -46,9 +46,9 @@ def fetch_model(config):
 
 def collate_stats(sub_step_metrics, step_metrics):
     collated_stats = []
-    for metric in [const.PRECISION, const.RECALL, const.F1, const.AUC]:
+    for metric in [const.PRECISION, const.RECALL, const.F1, const.ACCURACY, const.AUC, const.PR_AUC]:
         collated_stats.append(sub_step_metrics[metric])
-    for metric in [const.PRECISION, const.RECALL, const.F1, const.AUC]:
+    for metric in [const.PRECISION, const.RECALL, const.F1, const.ACCURACY, const.AUC, const.PR_AUC]:
         collated_stats.append(step_metrics[metric])
 
     return collated_stats
@@ -69,8 +69,8 @@ def save_results_to_csv(config, sub_step_metrics, step_metrics):
         if not file_exist:
             writer.writerow([
                 "Task Name", "Variant", "Backbone", "Model Name",
-                "Sub-Step Precision", "Sub-Step Recall", "Sub-Step F1", "Sub-Step AUC",
-                "Step Precision", "Step Recall", "Step F1", "Step AUC"
+                "Sub-Step Precision", "Sub-Step Recall", "Sub-Step F1", "Sub-Step Accuracy", "Sub-Step AUC", "Sub-Step PR AUC",
+                "Step Precision", "Step Recall", "Step F1", "Step Accuracy", "Step AUC", "Step PR AUC"
             ])
         writer.writerow(collated_stats)
 
@@ -83,7 +83,9 @@ def save_results_to_firebase(config, sub_step_metrics, step_metrics):
         task_name=config.task_name,
         variant=config.variant,
         backbone=config.backbone,
+        split=config.split,
         model_name=config.model_name,
+        modality=config.modality
     )
 
     result.add_result_details(result_details)
@@ -160,6 +162,7 @@ def test_er_model(model, test_loader, criterion, device, phase):
     sub_step_precision = precision_score(all_sub_step_targets, pred_sub_step_labels)
     sub_step_recall = recall_score(all_sub_step_targets, pred_sub_step_labels)
     sub_step_f1 = f1_score(all_sub_step_targets, pred_sub_step_labels)
+    sub_step_accuracy = accuracy_score(all_sub_step_targets, pred_sub_step_labels)
     sub_step_auc = roc_auc_score(all_sub_step_targets, all_sub_step_outputs)
     sub_step_pr_auc = binary_auprc(torch.tensor(pred_sub_step_labels), torch.tensor(all_sub_step_targets))
 
@@ -167,6 +170,7 @@ def test_er_model(model, test_loader, criterion, device, phase):
         const.PRECISION: sub_step_precision,
         const.RECALL: sub_step_recall,
         const.F1: sub_step_f1,
+        const.ACCURACY: sub_step_accuracy,
         const.AUC: sub_step_auc,
         const.PR_AUC: sub_step_pr_auc
     }
@@ -194,9 +198,8 @@ def test_er_model(model, test_loader, criterion, device, phase):
         # else:
         #     step_output = neg_output
 
-        # Scale the output to [0, 1]
-        prob_range = np.max(step_output) - np.min(step_output)
-        step_output = (step_output - np.min(step_output)) / prob_range
+        # # Scale the output to [0, 1]
+
 
         mean_step_output = np.mean(step_output)
         step_target = 1 if np.mean(step_target) > 0.95 else 0
@@ -205,13 +208,17 @@ def test_er_model(model, test_loader, criterion, device, phase):
         all_step_targets.append(step_target)
 
     all_step_outputs = np.array(all_step_outputs)
+    prob_range = np.max(all_step_outputs) - np.min(all_step_outputs)
+    all_step_outputs = (all_step_outputs - np.min(all_step_outputs)) / prob_range
+
     all_step_targets = np.array(all_step_targets)
 
     # Calculate metrics at the step level
     pred_step_labels = (all_step_outputs > 0.5).astype(int)
-    precision = precision_score(all_step_targets, pred_step_labels)
+    precision = precision_score(all_step_targets, pred_step_labels, zero_division=0)
     recall = recall_score(all_step_targets, pred_step_labels)
     f1 = f1_score(all_step_targets, pred_step_labels)
+    accuracy = accuracy_score(all_step_targets, pred_step_labels)
 
     auc = roc_auc_score(all_step_targets, all_step_outputs)
     pr_auc = binary_auprc(torch.tensor(pred_step_labels), torch.tensor(all_step_targets))
@@ -220,8 +227,10 @@ def test_er_model(model, test_loader, criterion, device, phase):
         const.PRECISION: precision,
         const.RECALL: recall,
         const.F1: f1,
+        const.ACCURACY: accuracy,
         const.AUC: auc,
         const.PR_AUC: pr_auc
+
     }
 
     # Print step level metrics
