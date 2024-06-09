@@ -5,6 +5,8 @@ declare -a VARIANTS=('MLP' 'Transformer')
 declare -a BACKBONE=("omnivore")
 CKPT_DIRECTORY_PATH="/data/rohith/captain_cook/checkpoints/"
 FEATURES_DIRECTORY="/data/rohith/captain_cook/features/gopro/segments"
+TASK_NAME=("early_error_recognition")
+
 
 # Function name corrected for typo and best practice
 generate_run_scripts() {

@@ -75,9 +75,9 @@ class Config(object):
         parser.add_argument('--ckpt_directory', type=str, default='/data/rohith/captain_cook/checkpoints',
                             help='checkpoint directory')
         parser.add_argument('--split', type=str, default=const.PERSON_SPLIT, help='split')
-        parser.add_argument('--variant', type=str, default=const.TRANSFORMER_VARIANT, help='variant')
+        parser.add_argument('--variant', type=str, default=const.MLP_VARIANT, help='variant')
         parser.add_argument('--model_name', type=str, default=None, help='model name')
-        parser.add_argument('--task_name', type=str, default=const.ERROR_RECOGNITION, help='task name')
+        parser.add_argument('--task_name', type=str, default=const.EARLY_ERROR_RECOGNITION, help='task name')
         parser.add_argument('--modality', type=str, nargs='+', default=[const.VIDEO], help='audio')
 
         return parser

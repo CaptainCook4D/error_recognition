@@ -19,10 +19,10 @@ db_service = FirebaseService()
 def fetch_model_name(config):
     if config.model_name is None:
         if config.backbone in [const.RESNET3D, const.X3D, const.SLOWFAST, const.OMNIVORE]:
-            config.model_name = f"{config.task_name}_{config.variant}_{config.backbone}_{config.split}"
+            config.model_name = f"{config.split}_{config.backbone}_{config.variant}_{config.modality}"
         elif config.backbone == const.IMAGEBIND:
             combined_modality_name = '_'.join(config.modality)
-            config.model_name = f"{config.task_name}_{config.variant}_{config.backbone}_{combined_modality_name}_{config.split}"
+            config.model_name = f"{config.split}_{config.backbone}_{config.variant}_{combined_modality_name}"
 
     return config.model_name
 
@@ -44,23 +44,36 @@ def fetch_model(config):
     return model
 
 
-def collate_stats(sub_step_metrics, step_metrics):
-    collated_stats = []
-    for metric in [const.PRECISION, const.RECALL, const.F1, const.ACCURACY, const.AUC, const.PR_AUC]:
-        collated_stats.append(sub_step_metrics[metric])
-    for metric in [const.PRECISION, const.RECALL, const.F1, const.ACCURACY, const.AUC, const.PR_AUC]:
-        collated_stats.append(step_metrics[metric])
+def convert_and_round(value):
+    if isinstance(value, torch.Tensor):
+        return np.round(value.numpy(), 4)
+    return np.round(value, 4)
 
+
+def collate_stats(config, sub_step_metrics, step_metrics):
+    collated_stats = []
+    collated_stats.append(config.split)
+    collated_stats.append(config.backbone)
+    collated_stats.append(config.variant)
+    collated_stats.append(config.modality)
+    for metric in [const.PRECISION, const.RECALL, const.F1, const.ACCURACY, const.AUC, const.PR_AUC]:
+        collated_stats.append(convert_and_round(sub_step_metrics[metric]))
+    for metric in [const.PRECISION, const.RECALL, const.F1, const.ACCURACY, const.AUC, const.PR_AUC]:
+        #round to two digits before appending
+        collated_stats.append(convert_and_round(step_metrics[metric]))
     return collated_stats
 
 
-def save_results_to_csv(config, sub_step_metrics, step_metrics):
+def save_results_to_csv(config, sub_step_metrics, step_metrics, step_normalization=False, sub_step_normalization=False,
+                        threshold=0.5):
     results_dir = os.path.join(os.getcwd(), const.RESULTS)
-    task_results_dir = os.path.join(results_dir, config.task_name)
+    task_results_dir = os.path.join(results_dir, config.task_name, "combined_results")
     os.makedirs(task_results_dir, exist_ok=True)
+    config.model_name = fetch_model_name(config)
 
-    results_file_path = os.path.join(task_results_dir, f'{config.model_name}.csv')
-    collated_stats = collate_stats(sub_step_metrics, step_metrics)
+    results_file_path = os.path.join(task_results_dir,
+                                     f'step-{step_normalization}_substep-{sub_step_normalization}_threshold-{threshold}.csv')
+    collated_stats = collate_stats(config, sub_step_metrics, step_metrics)
 
     file_exist = os.path.isfile(results_file_path)
 
@@ -68,8 +81,9 @@ def save_results_to_csv(config, sub_step_metrics, step_metrics):
         writer = csv.writer(activity_idx_step_idx_annotation_csv_file, quoting=csv.QUOTE_NONNUMERIC)
         if not file_exist:
             writer.writerow([
-                "Task Name", "Variant", "Backbone", "Model Name",
-                "Sub-Step Precision", "Sub-Step Recall", "Sub-Step F1", "Sub-Step Accuracy", "Sub-Step AUC", "Sub-Step PR AUC",
+                "Split", "Backbone", "Variant", "Modality",
+                "Sub-Step Precision", "Sub-Step Recall", "Sub-Step F1", "Sub-Step Accuracy", "Sub-Step AUC",
+                "Sub-Step PR AUC",
                 "Step Precision", "Step Recall", "Step F1", "Step Accuracy", "Step AUC", "Step PR AUC"
             ])
         writer.writerow(collated_stats)
@@ -92,11 +106,12 @@ def save_results_to_firebase(config, sub_step_metrics, step_metrics):
     db_service.update_result(result.result_id, result.to_dict())
 
 
-def save_results(config, sub_step_metrics, step_metrics):
+def save_results(config, sub_step_metrics, step_metrics, step_normalization=False, sub_step_normalization=False,
+                 threshold=0.5):
     # 1. Save evaluation results to csv
-    save_results_to_csv(config, sub_step_metrics, step_metrics)
+    save_results_to_csv(config, sub_step_metrics, step_metrics, step_normalization, sub_step_normalization, threshold)
     # 2. Save evaluation results to firebase
-    save_results_to_firebase(config, sub_step_metrics, step_metrics)
+    # save_results_to_firebase(config, sub_step_metrics, step_metrics)
 
 
 def store_model(model, config, ckpt_name: str):
@@ -116,10 +131,32 @@ def store_model(model, config, ckpt_name: str):
 # ----------------------- TRAIN BASE FILES -----------------------
 
 
+def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
+    model.train()
+    train_loader = tqdm(train_loader)
+    num_batches = len(train_loader)
+    train_losses = []
+
+    for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
+        optimizer.zero_grad()
+        output = model(data)
+        loss = criterion(output, target)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Gradient clipping
+        optimizer.step()
+        train_losses.append(loss.item())
+        train_loader.set_description(
+            f'Train Epoch: {epoch}, Progress: {batch_idx}/{num_batches}, Loss: {loss.item():.6f}'
+        )
+    return train_losses
+
+
 # ----------------------- TEST BASE FILES -----------------------
 
 
-def test_er_model(model, test_loader, criterion, device, phase):
+def test_er_model(model, test_loader, criterion, device, phase, step_normalization=False, sub_step_normalization=False,
+                  threshold=0.5):
     total_samples = 0
     all_targets = []
     all_outputs = []
@@ -197,9 +234,12 @@ def test_er_model(model, test_loader, criterion, device, phase):
         #     step_output = pos_output
         # else:
         #     step_output = neg_output
-
+        step_output = np.array(step_output)
         # # Scale the output to [0, 1]
-
+        if start - end > 1:
+            if sub_step_normalization:
+                prob_range = np.max(step_output) - np.min(step_output)
+                step_output = (step_output - np.min(step_output)) / prob_range
 
         mean_step_output = np.mean(step_output)
         step_target = 1 if np.mean(step_target) > 0.95 else 0
@@ -208,13 +248,16 @@ def test_er_model(model, test_loader, criterion, device, phase):
         all_step_targets.append(step_target)
 
     all_step_outputs = np.array(all_step_outputs)
-    prob_range = np.max(all_step_outputs) - np.min(all_step_outputs)
-    all_step_outputs = (all_step_outputs - np.min(all_step_outputs)) / prob_range
+
+    # # Scale the output to [0, 1]
+    if step_normalization:
+        prob_range = np.max(all_step_outputs) - np.min(all_step_outputs)
+        all_step_outputs = (all_step_outputs - np.min(all_step_outputs)) / prob_range
 
     all_step_targets = np.array(all_step_targets)
 
     # Calculate metrics at the step level
-    pred_step_labels = (all_step_outputs > 0.5).astype(int)
+    pred_step_labels = (all_step_outputs > threshold).astype(int)
     precision = precision_score(all_step_targets, pred_step_labels, zero_division=0)
     recall = recall_score(all_step_targets, pred_step_labels)
     f1 = f1_score(all_step_targets, pred_step_labels)
@@ -240,3 +283,4 @@ def test_er_model(model, test_loader, criterion, device, phase):
     print("----------------------------------------------------------------")
 
     return test_losses, sub_step_metrics, step_metrics
+

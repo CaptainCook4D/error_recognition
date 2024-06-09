@@ -294,6 +294,11 @@ class CaptainCookStepDataset(Dataset):
         assert step_features is not None, f"Features not found for recording_id: {recording_id}"
         assert step_labels is not None, f"Labels not found for recording_id: {recording_id}"
 
+        if self._config.task_name in [const.ERROR_RECOGNITION, const.EARLY_ERROR_RECOGNITION]:
+            return step_features, step_labels
+        elif self._config.task_name == const.EARLY_ERROR_RECOGNITION:
+            return step_features, step_labels
+
         return step_features, step_labels
 
 

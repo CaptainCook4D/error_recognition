@@ -5,35 +5,13 @@ import torch.optim as optim
 import wandb
 from torch import nn
 from torch.utils.data import DataLoader
-from tqdm import tqdm
-from base import test_er_model, store_model, fetch_model, fetch_model_name
+from base import test_er_model, store_model, fetch_model, fetch_model_name, train_epoch
 from constants import Constants as const
 from core.config import Config
 from core.utils import init_logger_and_wandb
 from dataloader.CaptainCookStepDataset import CaptainCookStepDataset
 from dataloader.CaptainCookStepDataset import collate_fn
 from dataloader.CaptainCookSubStepDataset import CaptainCookSubStepDataset
-
-
-def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
-    model.train()
-    train_loader = tqdm(train_loader)
-    num_batches = len(train_loader)
-    train_losses = []
-
-    for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device), target.to(device)
-        optimizer.zero_grad()
-        output = model(data)
-        loss = criterion(output, target)
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Gradient clipping
-        optimizer.step()
-        train_losses.append(loss.item())
-        train_loader.set_description(
-            f'Train Epoch: {epoch}, Progress: {batch_idx}/{num_batches}, Loss: {loss.item():.6f}'
-        )
-    return train_losses
 
 
 def train_er_model(train_loader, val_loader, device, config, test_loader=None):

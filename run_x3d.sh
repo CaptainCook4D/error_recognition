@@ -5,7 +5,7 @@ VARIANTS=('MLP' 'Transformer')
 CKPT_DIRECTORY_PATH="/data/rohith/captain_cook/checkpoints/"
 BACKBONE=("x3d")
 FEATURES_DIRECTORY="/data/rohith/captain_cook/features/gopro/segments"
-
+TASK_NAME=("early_error_recognition")
 
 # Main program to run the x3d backbone iteratively for each split and variant
 generate_run_scripts() {

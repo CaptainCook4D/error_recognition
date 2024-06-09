@@ -8,6 +8,7 @@ declare -a BACKBONE=("imagebind")
 declare -a MODALITY=('audio' 'video')
 CKPT_DIRECTORY_PATH="/data/rohith/captain_cook/checkpoints/"
 FEATURES_DIRECTORY="/data/rohith/captain_cook/features/gopro/segments"
+TASK_NAME=("early_error_recognition")
 
 generate_run_scripts() {
     local current_dir=$(pwd)

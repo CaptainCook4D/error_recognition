@@ -12,7 +12,7 @@ from dataloader.CaptainCookStepDataset import CaptainCookStepDataset
 from dataloader.CaptainCookStepDataset import collate_fn
 
 
-def evaluate_er_models(config):
+def evaluate_er_models(config, step_normalization, sub_step_normalization, threshold):
     # 1. Load the trained model
     # 2. Load the test data
     # 3. Pass the test data through the model
@@ -30,7 +30,7 @@ def evaluate_er_models(config):
 
     # Calculate the evaluation metrics
     test_losses, sub_step_metrics, step_metrics = test_er_model(model, test_loader, criterion, config.device,
-                                                                phase='test')
+                                                                phase='test', step_normalization=step_normalization, sub_step_normalization=sub_step_normalization, threshold=threshold)
 
     # ----------------------PRINT METRICS----------------------
     print("Sub-Step Metrics: ", sub_step_metrics)
@@ -38,7 +38,7 @@ def evaluate_er_models(config):
     # ---------------------------------------------------------
 
     # Save the evaluation metrics in /logs/ as csv file and also push it to firebase database
-    save_results(config, sub_step_metrics, step_metrics)
+    save_results(config, sub_step_metrics, step_metrics, step_normalization, sub_step_normalization, threshold)
 
 
 def evaluate_ecr_models():
@@ -55,31 +55,34 @@ if __name__ == '__main__':
     test_best_epochs = [33, 31, 49, 25, 19, 8, 44, 34, 45, 39, 48, 8, 40, 48, 33, 31, 31, 49, 5, 43, 45, 25, 42, 2, 41, 27, 31, 5, 28, 4, 3, 20, 13, 6, 39, 51, 48, 8, 21, None, 19, 17, 5, 6, 7, 23, 2, 49, 11, 39, 11, 50, 31, None, 4, 8]
     best_epochs = [43, 9, 15, 25, 15, 40, 41, 3, 37, 28, 38, 20, 44, 9, 33, 31, 31, 49, 5, 43, 45, 25, 42, 2, 41, 27, 31, 5, 28, 4, 3, 20, 13, 6, 39, 50, 48, 8, 21, None, 19, 17, 5, 6, 7, 23, 2, 49, 11, 39, 11, 50, 31, None, 4, 8]
 
-    epoch_index = 0
-    for split in [const.STEP_SPLIT, const.RECORDINGS_SPLIT, const.PERSON_SPLIT, const.ENVIRONMENT_SPLIT]:
-        for backbone in [const.OMNIVORE, const.SLOWFAST, const.X3D, const.RESNET3D, const.IMAGEBIND]:
-            for variant in [const.MLP_VARIANT, const.TRANSFORMER_VARIANT]:
-                conf = Config()
-                conf.split = split
-                conf.backbone = backbone
-                conf.variant = variant
-                conf.phase = const.TEST
-                if backbone == const.IMAGEBIND:
-                    for modality in [[const.VIDEO], [const.AUDIO], [const.VIDEO, const.AUDIO]]:
-                        if best_epochs[epoch_index] is None:
-                            epoch_index += 1
-                            continue
-                        conf.modality = modality
-                        modality = "_".join(modality)
-                        conf.split = const.RECORDINGS_SPLIT
-                        # conf.ckpt_directory = f"/data/rohith/captain_cook/checkpoints/error_recognition/{variant}/{backbone}/error_recognition_{variant}_{backbone}_{modality}_{split}_epoch_{best_epochs[epoch_index]}.pt"
-                        print(f"{variant}_{backbone}_{modality}_{split}{best_epochs[epoch_index]}.pt")
-                        conf.ckpt_directory = f"/data/rohith/captain_cook/checkpoints/error_recognition/MLP/imagebind/error_recognition_MLP_imagebind_video_recordings_epoch_42.pt"
-                        evaluate_er_models(conf)
-                        epoch_index += 1
-                else:
-                    conf.modality = const.VIDEO
-                    conf.ckpt_directory = f"/data/rohith/captain_cook/checkpoints/error_recognition/{variant}/{backbone}/error_recognition_{variant}_{backbone}_{split}_epoch_{best_epochs[epoch_index]}.pt"
-                    # evaluate_er_models(conf)
-                    # print(f"{variant}_{backbone}_{split}{best_epochs[epoch_index]}.pt")
-                    epoch_index += 1
+    for step_normalization in [True]:
+        for sub_step_normalization in [True]:
+            for threshold in [0.5, 0.6]:
+                epoch_index = 0
+                for split in [const.STEP_SPLIT, const.RECORDINGS_SPLIT, const.PERSON_SPLIT, const.ENVIRONMENT_SPLIT]:
+                    for backbone in [const.OMNIVORE, const.SLOWFAST, const.X3D, const.RESNET3D, const.IMAGEBIND]:
+                        for variant in [const.MLP_VARIANT, const.TRANSFORMER_VARIANT]:
+                            conf = Config()
+                            conf.split = split
+                            conf.backbone = backbone
+                            conf.variant = variant
+                            conf.phase = const.TEST
+                            if backbone == const.IMAGEBIND:
+                                for modality in [[const.VIDEO], [const.AUDIO], [const.VIDEO, const.AUDIO]]:
+                                    if best_epochs[epoch_index] is None:
+                                        epoch_index += 1
+                                        continue
+                                    conf.modality = modality
+                                    modality = "_".join(modality)
+                                    conf.split = split
+                                    conf.ckpt_directory = f"/data/rohith/captain_cook/checkpoints/error_recognition/{variant}/{backbone}/error_recognition_{variant}_{backbone}_{modality}_{split}_epoch_{best_epochs[epoch_index]}.pt"
+                                    print(f"{variant}_{backbone}_{modality}_{split}_{best_epochs[epoch_index]}.pt")
+                                    # conf.ckpt_directory = f"/data/rohith/captain_cook/checkpoints/error_recognition/MLP/imagebind/error_recognition_MLP_imagebind_video_recordings_epoch_42.pt"
+                                    evaluate_er_models(conf, step_normalization, sub_step_normalization, threshold)
+                                    epoch_index += 1
+                            else:
+                                conf.modality = const.VIDEO
+                                conf.ckpt_directory = f"/data/rohith/captain_cook/checkpoints/error_recognition/{variant}/{backbone}/error_recognition_{variant}_{backbone}_{split}_epoch_{best_epochs[epoch_index]}.pt"
+                                print(f"{variant}_{backbone}_{split}_{best_epochs[epoch_index]}.pt")
+                                evaluate_er_models(conf, step_normalization, sub_step_normalization, threshold)
+                                epoch_index += 1
