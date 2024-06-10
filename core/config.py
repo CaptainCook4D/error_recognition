@@ -84,3 +84,13 @@ class Config(object):
 
     def set_model_name(self, model_name):
         self.model_name = model_name
+
+    def print_config(self):
+        """
+        Prints the configuration
+        :return:
+        """
+        print("Configuration:")
+        for k, v in self.__dict__.items():
+            print(f"{k}: {v}")
+        print("\n")

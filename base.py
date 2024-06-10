@@ -1,6 +1,10 @@
 import csv
 import os
 
+import wandb
+from torch import optim, nn
+from torch.utils.data import DataLoader
+
 from analysis.results.FirebaseService import FirebaseService
 from analysis.results.Result import Metrics, ResultDetails, Result
 from constants import Constants as const
@@ -12,6 +16,8 @@ from tqdm import tqdm
 
 from core.models.blocks import fetch_input_dim, MLP
 from core.models.er_former import ErFormer
+from dataloader.CaptainCookStepDataset import collate_fn, CaptainCookStepDataset
+from dataloader.CaptainCookSubStepDataset import CaptainCookSubStepDataset
 
 db_service = FirebaseService()
 
@@ -19,10 +25,10 @@ db_service = FirebaseService()
 def fetch_model_name(config):
     if config.model_name is None:
         if config.backbone in [const.RESNET3D, const.X3D, const.SLOWFAST, const.OMNIVORE]:
-            config.model_name = f"{config.split}_{config.backbone}_{config.variant}_{config.modality}"
+            config.model_name = f"{config.task_name}_{config.split}_{config.backbone}_{config.variant}_{config.modality}"
         elif config.backbone == const.IMAGEBIND:
             combined_modality_name = '_'.join(config.modality)
-            config.model_name = f"{config.split}_{config.backbone}_{config.variant}_{combined_modality_name}"
+            config.model_name = f"{config.task_name}_{config.split}_{config.backbone}_{config.variant}_{combined_modality_name}"
 
     return config.model_name
 
@@ -38,28 +44,23 @@ def fetch_model(config):
             model = ErFormer(config)
 
     assert model is not None, f"Model not found for variant: {config.variant} and backbone: {config.backbone}"
-
     model.to(config.device)
-
     return model
 
 
 def convert_and_round(value):
+    value = value * 100.0
     if isinstance(value, torch.Tensor):
-        return np.round(value.numpy(), 4)
-    return np.round(value, 4)
+        return np.round(value.numpy(), 2)
+    return np.round(value, 2)
 
 
 def collate_stats(config, sub_step_metrics, step_metrics):
-    collated_stats = []
-    collated_stats.append(config.split)
-    collated_stats.append(config.backbone)
-    collated_stats.append(config.variant)
-    collated_stats.append(config.modality)
+    collated_stats = [config.split, config.backbone, config.variant, config.modality]
     for metric in [const.PRECISION, const.RECALL, const.F1, const.ACCURACY, const.AUC, const.PR_AUC]:
         collated_stats.append(convert_and_round(sub_step_metrics[metric]))
     for metric in [const.PRECISION, const.RECALL, const.F1, const.ACCURACY, const.AUC, const.PR_AUC]:
-        #round to two digits before appending
+        # Round to two digits before appending
         collated_stats.append(convert_and_round(step_metrics[metric]))
     return collated_stats
 
@@ -111,7 +112,7 @@ def save_results(config, sub_step_metrics, step_metrics, step_normalization=Fals
     # 1. Save evaluation results to csv
     save_results_to_csv(config, sub_step_metrics, step_metrics, step_normalization, sub_step_normalization, threshold)
     # 2. Save evaluation results to firebase
-    # save_results_to_firebase(config, sub_step_metrics, step_metrics)
+    save_results_to_firebase(config, sub_step_metrics, step_metrics)
 
 
 def store_model(model, config, ckpt_name: str):
@@ -150,6 +151,138 @@ def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
             f'Train Epoch: {epoch}, Progress: {batch_idx}/{num_batches}, Loss: {loss.item():.6f}'
         )
     return train_losses
+
+
+def train_model_base(train_loader, val_loader, config, test_loader=None):
+    model = fetch_model(config)
+    device = config.device
+    optimizer = optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([1.5], dtype=torch.float32).to(device))
+    # criterion = nn.BCEWithLogitsLoss()
+    # Initialize variables to track the best model based on the desired metric (e.g., AUC)
+    best_model = {'model_state': None, 'metric': 0}
+
+    model_name = config.model_name
+    if config.model_name is None:
+        model_name = fetch_model_name(config)
+        config.model_name = model_name
+
+    train_stats_directory = f"stats/{config.task_name}/{config.variant}/{config.backbone}"
+    os.makedirs(train_stats_directory, exist_ok=True)
+    train_stats_file = f"{model_name}_training_performance.txt"
+    train_stats_file_path = os.path.join(train_stats_directory, train_stats_file)
+
+    # Open a file to store the losses and metrics
+    with open(train_stats_file_path, 'w') as f:
+        f.write('Epoch, Train Loss, Test Loss, Precision, Recall, F1, AUC\n')
+        for epoch in range(1, config.num_epochs + 1):
+            train_losses = train_epoch(model, device, train_loader, optimizer, epoch, criterion)
+            val_losses, sub_step_metrics, step_metrics = test_er_model(model, val_loader, criterion, device,
+                                                                       phase='val')
+
+            if test_loader is not None:
+                test_losses, test_sub_step_metrics, test_step_metrics = test_er_model(model, test_loader, criterion,
+                                                                                      device,
+                                                                                      phase='test')
+
+            avg_train_loss = sum(train_losses) / len(train_losses)
+            avg_val_loss = sum(val_losses) / len(val_losses)
+            avg_test_loss = sum(test_losses) / len(test_losses)
+
+            precision = step_metrics['precision']
+            recall = step_metrics['recall']
+            f1 = step_metrics['f1']
+            auc = step_metrics['auc']
+
+            # Write losses and metrics to file
+            f.write(
+                f'{epoch}, {avg_train_loss:.6f}, {avg_val_loss:.6f}, {avg_test_loss:.6f}, {precision:.6f}, {recall:.6f}, {f1:.6f}, {auc:.6f}\n')
+
+            running_metrics = {
+                "epoch": epoch,
+                "train_loss": avg_train_loss,
+                "test_loss": avg_test_loss,
+                "val_loss": avg_val_loss,
+                "val_metrics": {
+                    "step_metrics": step_metrics,
+                    "sub_step_metrics": sub_step_metrics
+                },
+                "test_metrics": {
+                    "step_metrics": test_step_metrics,
+                    "sub_step_metrics": test_sub_step_metrics
+                }
+            }
+
+            wandb.log(running_metrics)
+
+            print(f'Epoch: {epoch}, Train Loss: {avg_train_loss:.6f}, Test Loss: {avg_test_loss:.6f}, '
+                  f'Precision: {precision:.6f}, Recall: {recall:.6f}, F1: {f1:.6f}, AUC: {auc:.6f}')
+
+            # Update best model based on the chosen metric, here using AUC as an example
+            if auc > best_model['metric']:
+                best_model['metric'] = auc
+                best_model['model_state'] = model.state_dict()
+
+            store_model(model, config, ckpt_name=f"{model_name}_epoch_{epoch}.pt")
+
+        # Save the best model
+        if best_model['model_state'] is not None:
+            model.load_state_dict(best_model['model_state'])
+            store_model(model, config, ckpt_name=f"{model_name}_best.pt")
+
+
+def train_step_test_step_dataset_base(config):
+    torch.manual_seed(config.seed)
+
+    cuda_kwargs = {
+        "num_workers": 8,
+        "pin_memory": False,
+    }
+    train_kwargs = {**cuda_kwargs, "shuffle": True, "batch_size": 1}
+    test_kwargs = {**cuda_kwargs, "shuffle": False, "batch_size": 1}
+
+    print("-------------------------------------------------------------")
+    print("Training step model and testing on step level")
+    print(f"Train args: {train_kwargs}")
+    print(f"Test args: {test_kwargs}")
+    print(config.args)
+    print("-------------------------------------------------------------")
+
+    train_dataset = CaptainCookStepDataset(config, const.TRAIN, config.split)
+    train_loader = DataLoader(train_dataset, collate_fn=collate_fn, **train_kwargs)
+    val_dataset = CaptainCookStepDataset(config, const.VAL, config.split)
+    val_loader = DataLoader(val_dataset, collate_fn=collate_fn, **test_kwargs)
+    test_dataset = CaptainCookStepDataset(config, const.TEST, config.split)
+    test_loader = DataLoader(test_dataset, collate_fn=collate_fn, **test_kwargs)
+
+    return train_loader, val_loader, test_loader
+
+
+def train_sub_step_test_step_dataset_base(config):
+    torch.manual_seed(config.seed)
+
+    cuda_kwargs = {
+        "num_workers": 1,
+        "pin_memory": False,
+    }
+    train_kwargs = {**cuda_kwargs, "shuffle": True, "batch_size": 1024}
+    test_kwargs = {**cuda_kwargs, "shuffle": False, "batch_size": 1}
+
+    train_dataset = CaptainCookSubStepDataset(config, const.TRAIN, config.split)
+    train_loader = DataLoader(train_dataset, collate_fn=collate_fn, **train_kwargs)
+    val_dataset = CaptainCookStepDataset(config, const.TEST, config.split)
+    val_loader = DataLoader(val_dataset, collate_fn=collate_fn, **test_kwargs)
+    test_dataset = CaptainCookStepDataset(config, const.TEST, config.split)
+    test_loader = DataLoader(test_dataset, collate_fn=collate_fn, **test_kwargs)
+
+    print("-------------------------------------------------------------")
+    print("Training sub-step model and testing on step level")
+    print(f"Train args: {train_kwargs}")
+    print(f"Test args: {test_kwargs}")
+    print(f"Split: {config.split}")
+    print("-------------------------------------------------------------")
+
+    return train_loader, val_loader, test_loader
 
 
 # ----------------------- TEST BASE FILES -----------------------
@@ -273,7 +406,6 @@ def test_er_model(model, test_loader, criterion, device, phase, step_normalizati
         const.ACCURACY: accuracy,
         const.AUC: auc,
         const.PR_AUC: pr_auc
-
     }
 
     # Print step level metrics
@@ -283,4 +415,3 @@ def test_er_model(model, test_loader, criterion, device, phase, step_normalizati
     print("----------------------------------------------------------------")
 
     return test_losses, sub_step_metrics, step_metrics
-

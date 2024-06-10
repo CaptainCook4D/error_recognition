@@ -1,11 +1,11 @@
 #!/bin/bash
 
-declare -a SPLITS=('recordings' 'person' 'environment' 'step')
-declare -a VARIANTS=('MLP' 'Transformer')
+declare -a SPLITS=('recordings' 'step' 'person' 'environment')
+declare -a VARIANTS=('Transformer')
 declare -a BACKBONE=("omnivore")
 CKPT_DIRECTORY_PATH="/data/rohith/captain_cook/checkpoints/"
 FEATURES_DIRECTORY="/data/rohith/captain_cook/features/gopro/segments"
-TASK_NAME=("early_error_recognition")
+TASK_NAME="early_error_recognition"
 
 
 # Function name corrected for typo and best practice
@@ -16,9 +16,9 @@ generate_run_scripts() {
             echo "Running the omnivore backbone for split: $split and variant: $variant"
             # Direct use of $BACKBONE since it's declared as a single-element array
             if [[ "$variant" == "MLP" ]]; then
-                python train_er.py --split $split --variant $variant --backbone ${BACKBONE[0]} --ckpt_directory $CKPT_DIRECTORY_PATH
+                python train_eer.py --task_name $TASK_NAME --split $split --variant $variant --backbone ${BACKBONE[0]} --ckpt_directory $CKPT_DIRECTORY_PATH
             elif [[ "$variant" == "Transformer" ]]; then
-                python train_er.py --split $split --variant $variant --backbone ${BACKBONE[0]} --ckpt_directory $CKPT_DIRECTORY_PATH --lr 0.0001
+                python train_eer.py --task_name $TASK_NAME --split $split --variant $variant --backbone ${BACKBONE[0]} --ckpt_directory $CKPT_DIRECTORY_PATH --lr 0.0001
             fi
         done
     done

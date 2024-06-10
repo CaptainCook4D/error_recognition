@@ -25,6 +25,9 @@ class CaptainCookStepDataset(Dataset):
         with open('../annotations/annotation_json/step_annotations.json', 'r') as f:
             self._annotations = json.load(f)
 
+        with open('../annotations/annotation_json/error_annotations.json', 'r') as f:
+            self._error_annotations = json.load(f)
+
         print("Loaded annotations...... ")
 
         assert self._phase in ["train", "val", "test"], f"Invalid phase: {self._phase}"
@@ -68,10 +71,10 @@ class CaptainCookStepDataset(Dataset):
                     recording_step_dictionary[step['step_id']] = []
                 if self._backbone == const.IMAGEBIND:
                     recording_step_dictionary[step['step_id']].append(
-                        (math.floor(step['start_time']/2), math.ceil(step['end_time']/2), step['has_errors']))
+                        (math.floor(step['start_time'] / 2), math.ceil(step['end_time'] / 2), step['has_errors']))
                 else:
                     recording_step_dictionary[step['step_id']].append(
-                    (math.floor(step['start_time']), math.ceil(step['end_time']), step['has_errors']))
+                        (math.floor(step['start_time']), math.ceil(step['end_time']), step['has_errors']))
 
             # 2. Add step start and end time list to the step_dict
             for step_id in recording_step_dictionary.keys():
@@ -156,10 +159,10 @@ class CaptainCookStepDataset(Dataset):
 
                 if self._backbone == const.IMAGEBIND:
                     recording_step_dictionary[step['step_id']].append(
-                        (math.floor(step['start_time']/2), math.ceil(step['end_time']/2), step['has_errors']))
+                        (math.floor(step['start_time'] / 2), math.ceil(step['end_time'] / 2), step['has_errors']))
                 else:
                     recording_step_dictionary[step['step_id']].append(
-                    (math.floor(step['start_time']), math.ceil(step['end_time']), step['has_errors']))
+                        (math.floor(step['start_time']), math.ceil(step['end_time']), step['has_errors']))
 
             # 2. Add step start and end time list to the step_dict
             for step_id in recording_step_dictionary.keys():
@@ -186,6 +189,16 @@ class CaptainCookStepDataset(Dataset):
             step_labels = torch.ones(N, 1)
         else:
             step_labels = torch.zeros(N, 1)
+
+        # TODO: Method to construct labels for error category recognition
+
+        if self._config.task_name in [const.ERROR_RECOGNITION, const.ERROR_CATEGORY_RECOGNITION]:
+            return step_features, step_labels
+        elif self._config.task_name == const.EARLY_ERROR_RECOGNITION:
+            # Input only half of the step features and labels
+            step_features = step_features[:N // 2, :]
+            step_labels = step_labels[:N // 2, :]
+            return step_features, step_labels
 
         return step_features, step_labels
 
@@ -293,11 +306,6 @@ class CaptainCookStepDataset(Dataset):
 
         assert step_features is not None, f"Features not found for recording_id: {recording_id}"
         assert step_labels is not None, f"Labels not found for recording_id: {recording_id}"
-
-        if self._config.task_name in [const.ERROR_RECOGNITION, const.EARLY_ERROR_RECOGNITION]:
-            return step_features, step_labels
-        elif self._config.task_name == const.EARLY_ERROR_RECOGNITION:
-            return step_features, step_labels
 
         return step_features, step_labels
 
