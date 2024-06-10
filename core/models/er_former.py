@@ -16,7 +16,7 @@ class ErFormer(nn.Module):
         decoder_input_dimension = fetch_input_dim(config, decoder=True)
         # Initialize the MLP decoder
         self.decoder = MLP(decoder_input_dimension, 512, 1)
-        self.apply(init_weights)  # Apply weight initialization
+        # self.apply(init_weights)  # Apply weight initialization
 
     def forward(self, input_data):
         # Check for NaNs in input and replace them with zero

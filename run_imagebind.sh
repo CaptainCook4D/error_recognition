@@ -18,7 +18,7 @@ generate_run_scripts() {
                 if [[ "$variant" == "MLP" ]]; then
                     python train_eer.py --task_name $TASK_NAME --split $split --variant $variant --backbone ${BACKBONE[0]} --ckpt_directory $CKPT_DIRECTORY_PATH --modality $modality
                 elif [[ "$variant" == "Transformer" ]]; then
-                    python train_eer.py --task_name $TASK_NAME --split $split --variant $variant --backbone ${BACKBONE[0]} --ckpt_directory $CKPT_DIRECTORY_PATH --lr 0.0001 --modality $modality
+                    python train_eer.py --task_name $TASK_NAME --split $split --variant $variant --backbone ${BACKBONE[0]} --ckpt_directory $CKPT_DIRECTORY_PATH --lr 0.0000001 --modality $modality
                 fi
             done
         done

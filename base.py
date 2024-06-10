@@ -143,13 +143,17 @@ def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
         optimizer.zero_grad()
         output = model(data)
         loss = criterion(output, target)
+
+        assert not torch.isnan(loss).any(), "Loss contains NaN values"
+
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Gradient clipping
-        optimizer.step()
+
         train_losses.append(loss.item())
         train_loader.set_description(
             f'Train Epoch: {epoch}, Progress: {batch_idx}/{num_batches}, Loss: {loss.item():.6f}'
         )
+    optimizer.step()
     return train_losses
 
 
@@ -322,6 +326,9 @@ def test_er_model(model, test_loader, criterion, device, phase, step_normalizati
     # Flatten lists
     all_outputs = np.concatenate(all_outputs)
     all_targets = np.concatenate(all_targets)
+
+    # Assert that none of the outputs are NaN
+    assert not np.isnan(all_outputs).any(), "Outputs contain NaN values"
 
     # ------------------------- Sub-Step Level Metrics -------------------------
     all_sub_step_targets = all_targets.copy()

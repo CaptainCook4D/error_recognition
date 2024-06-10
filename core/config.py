@@ -64,18 +64,18 @@ class Config(object):
         parser.add_argument('--test-batch-size', type=int, default=1,
                             help='input batch size for testing (default: 1000)')
         parser.add_argument('--num_epochs', type=int, default=50, help='number of epochs')
-        parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
+        parser.add_argument('--lr', type=float, default=1e-5, help='learning rate')
         parser.add_argument('--weight_decay', type=float, default=1e-3, help='weight decay')
         parser.add_argument('--ckpt', type=str, default=None, help='checkpoint path')
         parser.add_argument('--seed', type=int, default=42, help='random seed (default: 1000)')
 
-        parser.add_argument('--backbone', type=str, default=const.IMAGEBIND, help='backbone model')
+        parser.add_argument('--backbone', type=str, default=const.OMNIVORE, help='backbone model')
         parser.add_argument('--features_directory', type=str, default='/data/rohith/captain_cook/features/gopro'
                                                                       '/segments', help='features directory')
         parser.add_argument('--ckpt_directory', type=str, default='/data/rohith/captain_cook/checkpoints',
                             help='checkpoint directory')
-        parser.add_argument('--split', type=str, default=const.PERSON_SPLIT, help='split')
-        parser.add_argument('--variant', type=str, default=const.MLP_VARIANT, help='variant')
+        parser.add_argument('--split', type=str, default=const.RECORDINGS_SPLIT, help='split')
+        parser.add_argument('--variant', type=str, default=const.TRANSFORMER_VARIANT, help='variant')
         parser.add_argument('--model_name', type=str, default=None, help='model name')
         parser.add_argument('--task_name', type=str, default=const.EARLY_ERROR_RECOGNITION, help='task name')
         parser.add_argument('--modality', type=str, nargs='+', default=[const.VIDEO], help='audio')
