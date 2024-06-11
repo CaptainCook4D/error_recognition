@@ -35,6 +35,7 @@ class Config(object):
         self.variant = const.MLP_VARIANT
         self.model_name = None
         self.task_name = const.ERROR_RECOGNITION
+        self.error_category = const.TECHNIQUE_ERROR
 
         self.model_name = None
 
@@ -79,6 +80,7 @@ class Config(object):
         parser.add_argument('--model_name', type=str, default=None, help='model name')
         parser.add_argument('--task_name', type=str, default=const.EARLY_ERROR_RECOGNITION, help='task name')
         parser.add_argument('--modality', type=str, nargs='+', default=[const.VIDEO], help='audio')
+        parser.add_argument("--error_category", type=str, default=const.TECHNIQUE_ERROR, help="error category")
 
         return parser
 

@@ -59,3 +59,11 @@ class Constants:
     VIDEO = "video"
     TEXT = "text"
     DEPTH = "depth"
+
+    # ---------------------- ERROR CATEGORY TYPES ----------------------
+    TECHNIQUE_ERROR = "Technique Error"
+    PREPARATION_ERROR = "Preparation Error"
+    TEMPERATURE_ERROR = "Temperature Error"
+    MEASUREMENT_ERROR = "Measurement Error"
+    TIMING_ERROR = "Timing Error"
+

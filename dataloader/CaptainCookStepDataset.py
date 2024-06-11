@@ -39,6 +39,58 @@ class CaptainCookStepDataset(Dataset):
         else:
             self._init_other_split_from_file(config, phase)
 
+        self._build_error_category_label_name_map()
+        self._build_error_category_labels()
+
+    def _build_error_category_label_name_map(self):
+        self._error_category_name_label_map = {const.TECHNIQUE_ERROR: 6, const.PREPARATION_ERROR: 2,
+                                               const.TEMPERATURE_ERROR: 3, const.MEASUREMENT_ERROR: 4,
+                                               const.TIMING_ERROR: 5}
+
+        self._error_category_label_name_map = {6: const.TECHNIQUE_ERROR, 2: const.PREPARATION_ERROR,
+                                               3: const.TEMPERATURE_ERROR, 4: const.MEASUREMENT_ERROR,
+                                               5: const.TIMING_ERROR}
+
+    def _build_error_category_labels(self):
+        self._recording_step_error_labels = {}
+        for recording_step_dictionary in self._error_annotations:
+            recording_id = recording_step_dictionary['recording_id']
+            self._recording_step_error_labels[recording_id] = {}
+            for step_annotation_dict in recording_step_dictionary['step_annotations']:
+                step_id = step_annotation_dict['step_id']
+                self._recording_step_error_labels[recording_id][step_id] = set()
+                if "errors" not in step_annotation_dict:
+                    self._recording_step_error_labels[recording_id][step_id].add(0)
+                else:
+                    for error_dict in step_annotation_dict['errors']:
+                        error_tag = error_dict['tag']
+                        error_label = self._error_category_name_label_map[error_tag]
+                        self._recording_step_error_labels[recording_id][step_id].add(error_label)
+
+    def _prepare_recording_step_dictionary(self, recording_id):
+        recording_step_dictionary = {}
+        for step in self._annotations[recording_id]['steps']:
+            step_start_time = step['start_time']
+            step_end_time = step['end_time']
+            step_id = step['step_id']
+            if step_start_time < 0 or step_end_time < 0:
+                # Ignore missing steps
+                continue
+            error_category_labels = self._recording_step_error_labels[recording_id][step_id]
+
+            if recording_step_dictionary.get(step_id) is None:
+                recording_step_dictionary[step_id] = []
+
+            if self._backbone == const.IMAGEBIND:
+                recording_step_dictionary[step_id].append(
+                    (math.floor(step_start_time / 2), math.ceil(step_end_time / 2), step['has_errors'],
+                     error_category_labels))
+            else:
+                recording_step_dictionary[step_id].append(
+                    (math.floor(step_start_time), math.ceil(step_end_time), step['has_errors'],
+                     error_category_labels))
+        return recording_step_dictionary
+
     def _init_step_split(self, config, phase):
         self._recording_ids_file = "recordings_combined_splits.json"
         print(f"Loading recording ids from {self._recording_ids_file}")
@@ -62,19 +114,7 @@ class CaptainCookStepDataset(Dataset):
             normal_index_id = 0
             error_index_id = 0
             # 1. Prepare step_id, list(<start, end>) for the recording_id
-            recording_step_dictionary = {}
-            for step in self._annotations[recording_id]['steps']:
-                if step['start_time'] < 0 or step['end_time'] < 0:
-                    # Ignore missing steps
-                    continue
-                if recording_step_dictionary.get(step['step_id']) is None:
-                    recording_step_dictionary[step['step_id']] = []
-                if self._backbone == const.IMAGEBIND:
-                    recording_step_dictionary[step['step_id']].append(
-                        (math.floor(step['start_time'] / 2), math.ceil(step['end_time'] / 2), step['has_errors']))
-                else:
-                    recording_step_dictionary[step['step_id']].append(
-                        (math.floor(step['start_time']), math.ceil(step['end_time']), step['has_errors']))
+            recording_step_dictionary = self._prepare_recording_step_dictionary(recording_id)
 
             # 2. Add step start and end time list to the step_dict
             for step_id in recording_step_dictionary.keys():
@@ -135,7 +175,6 @@ class CaptainCookStepDataset(Dataset):
 
     def _init_other_split_from_file(self, config, phase):
         self._recording_ids_file = f"{self._split}_combined_splits.json"
-        # annotations_file_path = os.path.join(os.path.dirname(__file__), f'../er_annotations/{self._recording_ids_file}')
         annotations_file_path = f"/home/rxp190007/CODE/error_recognition/er_annotations/{self._recording_ids_file}"
         print(f"Loading recording ids from {self._recording_ids_file}")
         with open(f'{annotations_file_path}', 'r') as file:
@@ -144,61 +183,66 @@ class CaptainCookStepDataset(Dataset):
         self._recording_ids = self._recording_ids_json[phase]
         self._step_dict = {}
         index_id = 0
-        for recording in self._recording_ids:
-            if recording == '12_6' and self._backbone == const.IMAGEBIND:
+        for recording_id in self._recording_ids:
+            if recording_id == '12_6' and self._backbone == const.IMAGEBIND:
                 # Skip this recording as it has no features
                 continue
             # 1. Prepare step_id, list(<start, end>) for the recording_id
-            recording_step_dictionary = {}
-            for step in self._annotations[recording]['steps']:
-                if step['start_time'] < 0 or step['end_time'] < 0:
-                    # Ignore missing steps
-                    continue
-                if recording_step_dictionary.get(step['step_id']) is None:
-                    recording_step_dictionary[step['step_id']] = []
-
-                if self._backbone == const.IMAGEBIND:
-                    recording_step_dictionary[step['step_id']].append(
-                        (math.floor(step['start_time'] / 2), math.ceil(step['end_time'] / 2), step['has_errors']))
-                else:
-                    recording_step_dictionary[step['step_id']].append(
-                        (math.floor(step['start_time']), math.ceil(step['end_time']), step['has_errors']))
+            recording_step_dictionary = self._prepare_recording_step_dictionary(recording_id)
 
             # 2. Add step start and end time list to the step_dict
             for step_id in recording_step_dictionary.keys():
-                self._step_dict[index_id] = (recording, recording_step_dictionary[step_id])
+                self._step_dict[index_id] = (recording_id, recording_step_dictionary[step_id])
                 index_id += 1
 
     def __len__(self):
         assert len(self._step_dict) > 0, "No data found in the dataset"
         return len(self._step_dict)
 
-    def _build_modality_step_features_labels(self, recording_features, step_start_end_list):
-        # Build step features by concatenating the features of the step from the list
-        step_features = []
-        step_has_errors = None
-        for step_start_time, step_end_time, has_errors in step_start_end_list:
-            sub_step_features = recording_features[step_start_time:step_end_time, :]
-            step_features.append(sub_step_features)
-            step_has_errors = has_errors
-        step_features = np.concatenate(step_features, axis=0)
-        step_features = torch.from_numpy(step_features).float()
+    def _build_task_specific_features_labels(self, step_features, step_has_errors, step_error_category_labels):
         N, d = step_features.shape
+        if self._config.task_name == const.ERROR_RECOGNITION:
+            if step_has_errors:
+                step_labels = torch.ones(N, 1)
+            else:
+                step_labels = torch.zeros(N, 1)
 
-        if step_has_errors:
-            step_labels = torch.ones(N, 1)
-        else:
-            step_labels = torch.zeros(N, 1)
-
-        # TODO: Method to construct labels for error category recognition
-
-        if self._config.task_name in [const.ERROR_RECOGNITION, const.ERROR_CATEGORY_RECOGNITION]:
             return step_features, step_labels
         elif self._config.task_name == const.EARLY_ERROR_RECOGNITION:
             # Input only half of the step features and labels
             step_features = step_features[:N // 2, :]
-            step_labels = step_labels[:N // 2, :]
+            if step_has_errors:
+                step_labels = torch.ones(N // 2, 1)
+            else:
+                step_labels = torch.zeros(N // 2, 1)
             return step_features, step_labels
+        elif self._config.task_name == const.ERROR_CATEGORY_RECOGNITION:
+            # Task Error Category
+            task_error_category_label = self._error_category_name_label_map[self._config.error_category]
+            if task_error_category_label in step_error_category_labels:
+                step_labels = torch.ones(N, 1)
+            else:
+                step_labels = torch.zeros(N, 1)
+            return step_features, step_labels
+
+    def _build_modality_step_features_labels(self, recording_features, step_start_end_list):
+        # Build step features by concatenating the features of the step from the list
+        step_features = []
+        step_has_errors = None
+        step_error_category_labels = None
+        for step_start_time, step_end_time, has_errors, error_category_labels in step_start_end_list:
+            sub_step_features = recording_features[step_start_time:step_end_time, :]
+            step_features.append(sub_step_features)
+            step_has_errors = has_errors
+            step_error_category_labels = error_category_labels
+        step_features = np.concatenate(step_features, axis=0)
+        step_features = torch.from_numpy(step_features).float()
+
+        step_features, step_labels = self._build_task_specific_features_labels(
+            step_features,
+            step_has_errors,
+            step_error_category_labels
+        )
 
         return step_features, step_labels
 

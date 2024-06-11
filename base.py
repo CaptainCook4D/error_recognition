@@ -23,13 +23,23 @@ db_service = FirebaseService()
 
 
 def fetch_model_name(config):
-    if config.model_name is None:
-        if config.backbone in [const.RESNET3D, const.X3D, const.SLOWFAST, const.OMNIVORE]:
-            config.model_name = f"{config.task_name}_{config.split}_{config.backbone}_{config.variant}_{config.modality}"
-        elif config.backbone == const.IMAGEBIND:
-            combined_modality_name = '_'.join(config.modality)
-            config.model_name = f"{config.task_name}_{config.split}_{config.backbone}_{config.variant}_{combined_modality_name}"
+    if config.task_name == const.ERROR_CATEGORY_RECOGNITION:
+        return fetch_model_name_ecr(config)
+    elif config.task_name == const.EARLY_ERROR_RECOGNITION:
+        if config.model_name is None:
+            if config.backbone in [const.RESNET3D, const.X3D, const.SLOWFAST, const.OMNIVORE]:
+                config.model_name = f"{config.task_name}_{config.split}_{config.backbone}_{config.variant}_{config.modality}"
+            elif config.backbone == const.IMAGEBIND:
+                combined_modality_name = '_'.join(config.modality)
+                config.model_name = f"{config.task_name}_{config.split}_{config.backbone}_{config.variant}_{combined_modality_name}"
+    return config.model_name
 
+
+def fetch_model_name_ecr(config):
+    combined_modality_name = '_'.join(config.modality)
+    if config.model_name is None:
+        config.model_name = (f"{config.task_name}_{config.split}_{config.backbone}"
+                             f"_{config.variant}_{combined_modality_name}_{config.error_category}")
     return config.model_name
 
 
