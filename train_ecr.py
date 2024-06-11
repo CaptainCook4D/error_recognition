@@ -19,7 +19,6 @@ def train_step_test_step_ecr(config):
 def main():
     conf = Config()
     conf.task_name = const.ERROR_CATEGORY_RECOGNITION
-    conf.error_category = const.TECHNIQUE_ERROR
     if conf.model_name is None:
         m_name = fetch_model_name(conf)
         conf.model_name = m_name

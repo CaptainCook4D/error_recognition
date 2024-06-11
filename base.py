@@ -158,12 +158,12 @@ def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
 
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Gradient clipping
-
+        optimizer.step()
         train_losses.append(loss.item())
         train_loader.set_description(
             f'Train Epoch: {epoch}, Progress: {batch_idx}/{num_batches}, Loss: {loss.item():.6f}'
         )
-    optimizer.step()
+
     return train_losses
 
 
@@ -259,6 +259,8 @@ def train_step_test_step_dataset_base(config):
     print("Training step model and testing on step level")
     print(f"Train args: {train_kwargs}")
     print(f"Test args: {test_kwargs}")
+    if config.error_category is not None:
+        print(f"Error Category: {config.error_category}")
     print(config.args)
     print("-------------------------------------------------------------")
 

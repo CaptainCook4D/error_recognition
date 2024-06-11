@@ -1,8 +1,8 @@
 #!/bin/bash
 
 declare -a SPLITS=('recordings' 'step' 'person' 'environment')
-declare -a ERROR_CATEGORIES=('Technique Error' 'Preparation Error' 'Measurement Error' 'Temperature Error' 'Timing Error')
-declare -a VARIANTS=('Transformer')
+declare -a ERROR_CATEGORIES=('TechniqueError' 'PreparationError' 'MeasurementError' 'TemperatureError' 'TimingError')
+declare -a VARIANTS=('MLP' 'Transformer')
 declare -a BACKBONE=("imagebind")
 declare -a MODALITY=('video audio')
 CKPT_DIRECTORY_PATH="/data/rohith/captain_cook/checkpoints/"

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SPLITS=('recordings' 'step' 'person' 'environment')
-ERROR_CATEGORIES=('Technique Error' 'Preparation Error' 'Measurement Error' 'Temperature Error' 'Timing Error')
+ERROR_CATEGORIES=('TechniqueError' 'PreparationError' 'MeasurementError' 'TemperatureError' 'TimingError')
 VARIANTS=('MLP' 'Transformer')
 CKPT_DIRECTORY_PATH="/data/rohith/captain_cook/checkpoints/"
 BACKBONE=("slowfast")

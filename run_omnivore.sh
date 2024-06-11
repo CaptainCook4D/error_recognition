@@ -1,8 +1,8 @@
 #!/bin/bash
 
 declare -a SPLITS=('recordings' 'step' 'person' 'environment')
-declare -a ERROR_CATEGORIES=('Technique Error' 'Preparation Error' 'Measurement Error' 'Temperature Error' 'Timing Error')
-declare -a VARIANTS=('Transformer')
+declare -a ERROR_CATEGORIES=('TechniqueError' 'PreparationError' 'MeasurementError' 'TemperatureError' 'TimingError')
+declare -a VARIANTS=('MLP' 'Transformer')
 declare -a BACKBONE=("omnivore")
 CKPT_DIRECTORY_PATH="/data/rohith/captain_cook/checkpoints/"
 FEATURES_DIRECTORY="/data/rohith/captain_cook/features/gopro/segments"
@@ -15,7 +15,7 @@ generate_run_scripts() {
     for split in "${SPLITS[@]}"; do
         for error_category in "${ERROR_CATEGORIES[@]}"; do
             for variant in "${VARIANTS[@]}"; do
-                echo "Running the x3d backbone for split: $split and variant: $variant and error category: $error_category"
+                echo "Running the omnivore backbone for split: $split and variant: $variant and error category: $error_category"
                 # Direct use of $BACKBONE since it's declared as a single-element array
                 if [[ "$variant" == "MLP" ]]; then
                     python train_ecr.py --error_category $error_category --task_name $TASK_NAME --split $split --variant $variant --backbone ${BACKBONE[0]} --ckpt_directory $CKPT_DIRECTORY_PATH

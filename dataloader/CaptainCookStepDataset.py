@@ -34,13 +34,13 @@ class CaptainCookStepDataset(Dataset):
 
         self._features_directory = self._config.video_features_directory
 
+        self._build_error_category_label_name_map()
+        self._build_error_category_labels()
+
         if self._split == const.STEP_SPLIT:
             self._init_step_split(config, phase)
         else:
             self._init_other_split_from_file(config, phase)
-
-        self._build_error_category_label_name_map()
-        self._build_error_category_labels()
 
     def _build_error_category_label_name_map(self):
         self._error_category_name_label_map = {const.TECHNIQUE_ERROR: 6, const.PREPARATION_ERROR: 2,
@@ -50,6 +50,14 @@ class CaptainCookStepDataset(Dataset):
         self._error_category_label_name_map = {6: const.TECHNIQUE_ERROR, 2: const.PREPARATION_ERROR,
                                                3: const.TEMPERATURE_ERROR, 4: const.MEASUREMENT_ERROR,
                                                5: const.TIMING_ERROR}
+
+        self._category_name_map = {
+            'TechniqueError': const.TECHNIQUE_ERROR,
+            'PreparationError': const.PREPARATION_ERROR,
+            'TemperatureError': const.TEMPERATURE_ERROR,
+            'MeasurementError': const.MEASUREMENT_ERROR,
+            'TimingError': const.TIMING_ERROR
+        }
 
     def _build_error_category_labels(self):
         self._recording_step_error_labels = {}
@@ -64,7 +72,12 @@ class CaptainCookStepDataset(Dataset):
                 else:
                     for error_dict in step_annotation_dict['errors']:
                         error_tag = error_dict['tag']
-                        error_label = self._error_category_name_label_map[error_tag]
+                        if error_tag in self._error_category_name_label_map:
+                            error_label = self._error_category_name_label_map[error_tag]
+                        else:
+                            error_label = 0
+
+                        assert error_label is not None, f"Error label not found for error_tag: {error_tag}"
                         self._recording_step_error_labels[recording_id][step_id].add(error_label)
 
     def _prepare_recording_step_dictionary(self, recording_id):
@@ -206,7 +219,6 @@ class CaptainCookStepDataset(Dataset):
                 step_labels = torch.ones(N, 1)
             else:
                 step_labels = torch.zeros(N, 1)
-
             return step_features, step_labels
         elif self._config.task_name == const.EARLY_ERROR_RECOGNITION:
             # Input only half of the step features and labels
@@ -217,8 +229,10 @@ class CaptainCookStepDataset(Dataset):
                 step_labels = torch.zeros(N // 2, 1)
             return step_features, step_labels
         elif self._config.task_name == const.ERROR_CATEGORY_RECOGNITION:
-            # Task Error Category
-            task_error_category_label = self._error_category_name_label_map[self._config.error_category]
+            # print(f"Error category: {self._config.error_category}")
+            error_category_name = self._category_name_map[self._config.error_category]
+            # print(f"Error category name: {error_category_name}")
+            task_error_category_label = self._error_category_name_label_map[error_category_name]
             if task_error_category_label in step_error_category_labels:
                 step_labels = torch.ones(N, 1)
             else:
