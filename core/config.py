@@ -14,10 +14,10 @@ class Config(object):
         self.phase = 'train'
         self.segment_length = 1
 
-        self.video_features_directory = "/data/rohith/captain_cook/features/gopro/segments"
-        self.audio_features_directory = "/data/rohith/captain_cook/features/gopro/audios"
-        self.text_features_directory = "/data/rohith/captain_cook/features/gopro/texts"
-        self.depth_features_directory = "/data/rohith/captain_cook/features/gopro/depths"
+        self.video_features_directory = "/data/rohith/captain_cook/features/gopro/segments_2/video"
+        self.audio_features_directory = "/data/rohith/captain_cook/features/gopro/segments_2/audio"
+        self.text_features_directory = "/data/rohith/captain_cook/features/gopro/segments_2/text"
+        self.depth_features_directory = "/data/rohith/captain_cook/features/gopro/segments_2/depth"
 
         self.ckpt_directory = "/data/rohith/captain_cook/checkpoints/"
         self.split = 'recordings'
@@ -47,8 +47,7 @@ class Config(object):
         if self.backbone == const.IMAGEBIND:
             if self.modality is None:
                 self.modality = [const.VIDEO]
-        else:
-            self.modality = [const.VIDEO]
+                
 
     def setup_parser(self):
         """
@@ -72,13 +71,13 @@ class Config(object):
 
         parser.add_argument('--backbone', type=str, default=const.OMNIVORE, help='backbone model')
         parser.add_argument('--features_directory', type=str, default='/data/rohith/captain_cook/features/gopro'
-                                                                      '/segments', help='features directory')
+                                                                      '/segments_2', help='features directory')
         parser.add_argument('--ckpt_directory', type=str, default='/data/rohith/captain_cook/checkpoints',
                             help='checkpoint directory')
         parser.add_argument('--split', type=str, default=const.RECORDINGS_SPLIT, help='split')
         parser.add_argument('--variant', type=str, default=const.TRANSFORMER_VARIANT, help='variant')
         parser.add_argument('--model_name', type=str, default=None, help='model name')
-        parser.add_argument('--task_name', type=str, default=const.EARLY_ERROR_RECOGNITION, help='task name')
+        parser.add_argument('--task_name', type=str, default=const.ERROR_RECOGNITION, help='task name')
         parser.add_argument("--error_category", type=str, help="error category")
         parser.add_argument('--modality', type=str, nargs='+', default=[const.VIDEO], help='audio')
 
