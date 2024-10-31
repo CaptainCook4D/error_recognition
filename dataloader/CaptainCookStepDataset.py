@@ -94,6 +94,8 @@ class CaptainCookStepDataset(Dataset):
             if recording_step_dictionary.get(step_id) is None:
                 recording_step_dictionary[step_id] = []
 
+            # We consider 2 seconds features extracted using ImageBind
+            # Whereas we consider 1 second features extracted from other backbones
             if self._backbone == const.IMAGEBIND:
                 recording_step_dictionary[step_id].append(
                     (math.floor(step_start_time / 2), math.ceil(step_end_time / 2), step['has_errors'],
@@ -293,21 +295,17 @@ class CaptainCookStepDataset(Dataset):
         return step_features, step_labels
 
     def _get_depth_features(self, recording_id, step_start_end_list):
-        features_path = os.path.join(self._config.depth_features_directory, self._backbone,
-                                     f'{recording_id}_360p.mp4_1s_1s.npz')
+        features_path = os.path.join(self._config.depth_features_directory, self._backbone, f'{recording_id}.npz')
         features_data = np.load(features_path)
-        # TODO: Correct this
-        recording_features = features_data['arr_0']
+        recording_features = self.fetch_imagebind_data(features_data, "video_embeddings")
         step_features, step_labels = self._build_modality_step_features_labels(recording_features, step_start_end_list)
         features_data.close()
         return step_features, step_labels
 
     def _get_text_features(self, recording_id, step_start_end_list):
-        features_path = os.path.join(self._config.text_features_directory, self._backbone,
-                                     f'{recording_id}_360p.mp4_1s_1s.npz')
+        features_path = os.path.join(self._config.text_features_directory, self._backbone, f'{recording_id}_360p.npz')
         features_data = np.load(features_path)
-        # TODO: Correct this
-        recording_features = features_data['arr_0']
+        recording_features = self.fetch_imagebind_data(features_data, "video_embeddings")
         step_features, step_labels = self._build_modality_step_features_labels(recording_features, step_start_end_list)
         features_data.close()
         return step_features, step_labels

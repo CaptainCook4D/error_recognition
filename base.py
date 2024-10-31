@@ -83,7 +83,7 @@ def save_results_to_csv(config, sub_step_metrics, step_metrics, step_normalizati
     config.model_name = fetch_model_name(config)
 
     results_file_path = os.path.join(task_results_dir,
-                                     f'step-{step_normalization}_substep-{sub_step_normalization}_threshold-{threshold}.csv')
+                                     f'step_{step_normalization}_substep_{sub_step_normalization}_threshold_{threshold}.csv')
     collated_stats = collate_stats(config, sub_step_metrics, step_metrics)
 
     file_exist = os.path.isfile(results_file_path)
@@ -122,7 +122,7 @@ def save_results(config, sub_step_metrics, step_metrics, step_normalization=Fals
     # 1. Save evaluation results to csv
     save_results_to_csv(config, sub_step_metrics, step_metrics, step_normalization, sub_step_normalization, threshold)
     # 2. Save evaluation results to firebase
-    save_results_to_firebase(config, sub_step_metrics, step_metrics)
+    # save_results_to_firebase(config, sub_step_metrics, step_metrics)
 
 
 def store_model(model, config, ckpt_name: str):

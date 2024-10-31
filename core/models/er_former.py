@@ -8,6 +8,7 @@ class ErFormer(nn.Module):
 
     def __init__(self, config, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.config = config
         input_dimension = fetch_input_dim(config)
 
         # Initialize the transformer encoder
@@ -24,15 +25,21 @@ class ErFormer(nn.Module):
 
         # Encode the input
         encoded_output = self.step_encoder(input_data)
-
         _, dim = encoded_output.shape
+
         audio_output = None
         text_output = None
+        depth_output = None
+
+        # Split the encoded output into video, audio, text and depth outputs
+        # Modality Order: Video, Audio, Text, Depth
         video_output = encoded_output[:, :1024]
         if dim // 1024 > 1:
             audio_output = encoded_output[:, 1024:2048]
         elif dim // 1024 > 2:
             text_output = encoded_output[:, 2048:3072]
+        elif dim // 1024 > 3:
+            depth_output = encoded_output[:, 3072:]
 
         # Do a weighted sum of the outputs
         if dim // 1024 == 1:
@@ -40,7 +47,9 @@ class ErFormer(nn.Module):
         elif dim // 1024 == 2:
             encoded_output = 0.65 * video_output + 0.35 * audio_output
         elif dim // 1024 == 3:
-            encoded_output = 0.5 * video_output + 0.3 * audio_output + 0.2 * text_output
+            encoded_output = 0.4 * video_output + 0.25 * audio_output + 0.3 * text_output
+        else:
+            encoded_output = 0.3 * video_output + 0.2 * audio_output + 0.3 * text_output + 0.2 * depth_output
 
         # Decode the output
         final_output = self.decoder(encoded_output)
@@ -49,7 +58,6 @@ class ErFormer(nn.Module):
         # final_output = torch.nan_to_num(final_output, nan=0.0, posinf=1.0, neginf=-1.0)
 
         return final_output
-
 
 def init_weights(m):
     if isinstance(m, nn.Linear):

@@ -34,7 +34,7 @@ class Config(object):
 
         self.variant = const.MLP_VARIANT
         self.model_name = None
-        self.task_name = const.ERROR_RECOGNITION
+        self.task_name = const.EARLY_ERROR_RECOGNITION
         self.error_category = None
 
         self.model_name = None

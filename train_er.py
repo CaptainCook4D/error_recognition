@@ -28,10 +28,4 @@ def main():
 
 
 if __name__ == "__main__":
-    conf = Config()
-    if conf.model_name is None:
-        m_name = fetch_model_name(conf)
-        conf.model_name = m_name
-    init_logger_and_wandb(conf)
-    train_step_test_step_er(conf)
-    wandb.finish()
+    main()

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 declare -a SPLITS=('recordings' 'step' 'person' 'environment')
+declare -a ERROR_CATEGORIES=('TechniqueError' 'PreparationError' 'MeasurementError' 'TemperatureError' 'TimingError')
 declare -a VARIANTS=('Transformer')
 declare -a BACKBONE=("imagebind")
 declare -a MODALITY=('audio' 'video')
