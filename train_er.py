@@ -22,9 +22,14 @@ def main():
     if conf.model_name is None:
         m_name = fetch_model_name(conf)
         conf.model_name = m_name
-    init_logger_and_wandb(conf)
+
+    if conf.enable_wandb:
+        init_logger_and_wandb(conf)
+
     train_step_test_step_er(conf)
-    wandb.finish()
+
+    if conf.enable_wandb:
+        wandb.finish()
 
 
 if __name__ == "__main__":

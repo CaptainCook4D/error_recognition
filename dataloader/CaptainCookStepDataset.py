@@ -271,12 +271,11 @@ class CaptainCookStepDataset(Dataset):
     def _get_video_features(self, recording_id, step_start_end_list):
         if self._backbone == const.IMAGEBIND:
             recording_name = f"{recording_id}_360p.mp4"
-            features_path = os.path.join(self._config.video_features_directory, f"{self._backbone}_2",
-                                         f'{recording_name}.npz')
+            features_path = os.path.join(self._config.video_features_directory, f'{recording_name}.npz')
             features_data = np.load(features_path)
             recording_features = self.fetch_imagebind_data(features_data, "video_embeddings")
         else:
-            features_path = os.path.join(self._config.video_features_directory, self._backbone,
+            features_path = os.path.join(self._config.segment_features_directory, "video", self._backbone,
                                          f'{recording_id}_360p.mp4_1s_1s.npz')
             features_data = np.load(features_path)
             recording_features = features_data['arr_0']
@@ -287,7 +286,7 @@ class CaptainCookStepDataset(Dataset):
 
     def _get_audio_features(self, recording_id, step_start_end_list):
         recording_name = f"{recording_id}.wav"
-        features_path = os.path.join(self._config.audio_features_directory, self._backbone, f'{recording_name}.npz')
+        features_path = os.path.join(self._config.audio_features_directory, f'{recording_name}.npz')
         features_data = np.load(features_path)
         recording_features = self.fetch_imagebind_data(features_data, "video_embeddings")
         step_features, step_labels = self._build_modality_step_features_labels(recording_features, step_start_end_list)
@@ -295,7 +294,7 @@ class CaptainCookStepDataset(Dataset):
         return step_features, step_labels
 
     def _get_depth_features(self, recording_id, step_start_end_list):
-        features_path = os.path.join(self._config.depth_features_directory, self._backbone, f'{recording_id}.npz')
+        features_path = os.path.join(self._config.depth_features_directory, f'{recording_id}.npz')
         features_data = np.load(features_path)
         recording_features = self.fetch_imagebind_data(features_data, "video_embeddings")
         step_features, step_labels = self._build_modality_step_features_labels(recording_features, step_start_end_list)
@@ -303,7 +302,7 @@ class CaptainCookStepDataset(Dataset):
         return step_features, step_labels
 
     def _get_text_features(self, recording_id, step_start_end_list):
-        features_path = os.path.join(self._config.text_features_directory, self._backbone, f'{recording_id}_360p.npz')
+        features_path = os.path.join(self._config.text_features_directory, f'{recording_id}_360p.npz')
         features_data = np.load(features_path)
         recording_features = self.fetch_imagebind_data(features_data, "video_embeddings")
         step_features, step_labels = self._build_modality_step_features_labels(recording_features, step_start_end_list)

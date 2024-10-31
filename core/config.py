@@ -14,6 +14,10 @@ class Config(object):
         self.phase = 'train'
         self.segment_length = 1
 
+        # Use this for 1 sec video features
+        self.segment_features_directory = "/data/rohith/captain_cook/features/gopro/segments_1/"
+
+        # Use this for 2 sec multimodal features
         self.video_features_directory = "/data/rohith/captain_cook/features/gopro/segments_2/video"
         self.audio_features_directory = "/data/rohith/captain_cook/features/gopro/segments_2/audio"
         self.text_features_directory = "/data/rohith/captain_cook/features/gopro/segments_2/text"
@@ -32,12 +36,14 @@ class Config(object):
         self.seed = 1000
         self.device = 'cuda'
 
-        self.variant = const.MLP_VARIANT
+        self.variant = const.TRANSFORMER_VARIANT
         self.model_name = None
-        self.task_name = const.EARLY_ERROR_RECOGNITION
+        self.task_name = const.ERROR_RECOGNITION
         self.error_category = None
 
         self.model_name = None
+
+        self.enable_wandb = False
 
         self.parser = self.setup_parser()
         self.args = vars(self.parser.parse_args())
@@ -70,8 +76,6 @@ class Config(object):
         parser.add_argument('--seed', type=int, default=42, help='random seed (default: 1000)')
 
         parser.add_argument('--backbone', type=str, default=const.OMNIVORE, help='backbone model')
-        parser.add_argument('--features_directory', type=str, default='/data/rohith/captain_cook/features/gopro'
-                                                                      '/segments_2', help='features directory')
         parser.add_argument('--ckpt_directory', type=str, default='/data/rohith/captain_cook/checkpoints',
                             help='checkpoint directory')
         parser.add_argument('--split', type=str, default=const.RECORDINGS_SPLIT, help='split')
