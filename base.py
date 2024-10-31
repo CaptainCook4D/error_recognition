@@ -1,6 +1,8 @@
 import csv
 import os
 
+from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
+
 import wandb
 from torch import optim, nn
 from torch.utils.data import DataLoader
@@ -25,7 +27,7 @@ db_service = FirebaseService()
 def fetch_model_name(config):
     if config.task_name == const.ERROR_CATEGORY_RECOGNITION:
         return fetch_model_name_ecr(config)
-    elif config.task_name == const.EARLY_ERROR_RECOGNITION:
+    elif config.task_name in  [const.EARLY_ERROR_RECOGNITION, const.ERROR_RECOGNITION]:
         if config.model_name is None:
             if config.backbone in [const.RESNET3D, const.X3D, const.SLOWFAST, const.OMNIVORE]:
                 config.model_name = f"{config.task_name}_{config.split}_{config.backbone}_{config.variant}_{config.modality}"
@@ -150,6 +152,9 @@ def train_epoch(model, device, train_loader, optimizer, epoch, criterion):
 
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
+
+        assert not torch.isnan(data).any(), "Data contains NaN values"
+
         optimizer.zero_grad()
         output = model(data)
         loss = criterion(output, target)
@@ -171,7 +176,13 @@ def train_model_base(train_loader, val_loader, config, test_loader=None):
     model = fetch_model(config)
     device = config.device
     optimizer = optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
-    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([1.5], dtype=torch.float32).to(device))
+    # criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([2.5], dtype=torch.float32).to(device))
+    criterion = nn.BCEWithLogitsLoss()
+    scheduler = ReduceLROnPlateau(
+        optimizer, mode='max',
+        factor=0.1, patience=5, verbose=True,
+        threshold=1e-4, threshold_mode="abs", min_lr=1e-7
+    )
     # criterion = nn.BCEWithLogitsLoss()
     # Initialize variables to track the best model based on the desired metric (e.g., AUC)
     best_model = {'model_state': None, 'metric': 0}
@@ -190,14 +201,42 @@ def train_model_base(train_loader, val_loader, config, test_loader=None):
     with open(train_stats_file_path, 'w') as f:
         f.write('Epoch, Train Loss, Test Loss, Precision, Recall, F1, AUC\n')
         for epoch in range(1, config.num_epochs + 1):
-            train_losses = train_epoch(model, device, train_loader, optimizer, epoch, criterion)
-            val_losses, sub_step_metrics, step_metrics = test_er_model(model, val_loader, criterion, device,
-                                                                       phase='val')
+
+            model.train()
+            train_loader = tqdm(train_loader)
+            num_batches = len(train_loader)
+            train_losses = []
+
+            for batch_idx, (data, target) in enumerate(train_loader):
+                data, target = data.to(device), target.to(device)
+
+                assert not torch.isnan(data).any(), "Data contains NaN values"
+
+                optimizer.zero_grad()
+                output = model(data)
+                loss = criterion(output, target)
+
+                if torch.isnan(loss).any():
+                    print(f"Loss contains NaN values in epoch {epoch}, batch {batch_idx}")
+                    continue
+
+                # assert not torch.isnan(loss).any(), "Loss contains NaN values"
+
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Gradient clipping
+                optimizer.step()
+                train_losses.append(loss.item())
+                train_loader.set_description(
+                    f'Train Epoch: {epoch}, Progress: {batch_idx}/{num_batches}, Loss: {loss.item():.6f}'
+                )
+
+            val_losses, sub_step_metrics, step_metrics = test_er_model(model, val_loader, criterion, device, phase='val')
+
+            scheduler.step(step_metrics[const.AUC])
 
             if test_loader is not None:
                 test_losses, test_sub_step_metrics, test_step_metrics = test_er_model(model, test_loader, criterion,
-                                                                                      device,
-                                                                                      phase='test')
+                                                                                      device, phase='test')
 
             avg_train_loss = sum(train_losses) / len(train_losses)
             avg_val_loss = sum(val_losses) / len(val_losses)
@@ -227,7 +266,8 @@ def train_model_base(train_loader, val_loader, config, test_loader=None):
                 }
             }
 
-            wandb.log(running_metrics)
+            if config.enable_wandb:
+                wandb.log(running_metrics)
 
             print(f'Epoch: {epoch}, Train Loss: {avg_train_loss:.6f}, Test Loss: {avg_test_loss:.6f}, '
                   f'Precision: {precision:.6f}, Recall: {recall:.6f}, F1: {f1:.6f}, AUC: {auc:.6f}')

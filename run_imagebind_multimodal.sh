@@ -1,9 +1,9 @@
 #!/bin/bash
 
-declare -a SPLITS=('recordings' 'step' 'person' 'environment')
+declare -a SPLITS=('recordings' 'step')
 declare -a VARIANTS=('Transformer')
 declare -a BACKBONE=("imagebind")
-declare -a MODALITY=('video audio text depth')
+declare -a MODALITY=('video')
 CKPT_DIRECTORY_PATH="/data/rohith/captain_cook/checkpoints/"
 FEATURES_DIRECTORY="/data/rohith/captain_cook/features/gopro/segments_2"
 TASK_NAME="error_recognition"

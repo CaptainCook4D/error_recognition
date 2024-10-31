@@ -34,11 +34,19 @@ class ErFormer(nn.Module):
         # Split the encoded output into video, audio, text and depth outputs
         # Modality Order: Video, Audio, Text, Depth
         video_output = encoded_output[:, :1024]
-        if dim // 1024 > 1:
+        if dim // 1024 == 1:
+            video_output = encoded_output[:, :1024]
+        elif dim // 1024 == 2:
+            video_output = encoded_output[:, :1024]
             audio_output = encoded_output[:, 1024:2048]
-        elif dim // 1024 > 2:
+        elif dim // 1024 == 3:
+            video_output = encoded_output[:, :1024]
+            audio_output = encoded_output[:, 1024:2048]
             text_output = encoded_output[:, 2048:3072]
-        elif dim // 1024 > 3:
+        elif dim // 1024 == 4:
+            video_output = encoded_output[:, :1024]
+            audio_output = encoded_output[:, 1024:2048]
+            text_output = encoded_output[:, 2048:3072]
             depth_output = encoded_output[:, 3072:]
 
         # Do a weighted sum of the outputs
@@ -47,9 +55,9 @@ class ErFormer(nn.Module):
         elif dim // 1024 == 2:
             encoded_output = 0.65 * video_output + 0.35 * audio_output
         elif dim // 1024 == 3:
-            encoded_output = 0.4 * video_output + 0.25 * audio_output + 0.3 * text_output
-        else:
-            encoded_output = 0.3 * video_output + 0.2 * audio_output + 0.3 * text_output + 0.2 * depth_output
+            encoded_output = 0.4 * video_output + 0.3 * audio_output + 0.3 * text_output
+        elif dim // 1024 == 4:
+            encoded_output = 0.25 * video_output + 0.25 * audio_output + 0.25 * text_output + 0.25 * depth_output
 
         # Decode the output
         final_output = self.decoder(encoded_output)

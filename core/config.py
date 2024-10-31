@@ -41,9 +41,7 @@ class Config(object):
         self.task_name = const.ERROR_RECOGNITION
         self.error_category = None
 
-        self.model_name = None
-
-        self.enable_wandb = False
+        self.enable_wandb = True
 
         self.parser = self.setup_parser()
         self.args = vars(self.parser.parse_args())
