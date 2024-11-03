@@ -127,6 +127,32 @@ def main_er():
                                 epoch_index += 1
 
 
+def main_cr_er():
+    best_epochs = [17, 24]
+    for step_normalization in [True]:
+        for sub_step_normalization in [True]:
+            for threshold in [0.5, 0.6]:
+                epoch_index = 0
+                for split in [const.STEP_SPLIT, const.RECORDINGS_SPLIT]:
+                    for backbone in [const.IMAGEBIND]:
+                        for variant in [const.TRANSFORMER_VARIANT]:
+                            conf = Config()
+                            conf.split = split
+                            conf.backbone = backbone
+                            conf.variant = variant
+                            conf.phase = const.TEST
+                            if backbone == const.IMAGEBIND:
+                                modality = [const.VIDEO, const.AUDIO, const.TEXT]
+                                conf.modality = modality
+                                modality = "_".join(modality)
+                                conf.split = split
+                                conf.ckpt_directory = f"/data/rohith/captain_cook/checkpoints/error_recognition/{variant}/{backbone}/error_recognition_{split}_{backbone}_{variant}_{modality}_epoch_{best_epochs[epoch_index]}.pt"
+                                print(f"{variant}_{backbone}_{modality}_{split}_{best_epochs[epoch_index]}.pt")
+                                # conf.ckpt_directory = f"/data/rohith/captain_cook/checkpoints/error_recognition/MLP/imagebind/error_recognition_MLP_imagebind_video_recordings_epoch_42.pt"
+                                evaluate_er_models(conf, step_normalization, sub_step_normalization, threshold)
+                                epoch_index += 1
+
+
 def main_eer():
     best_epochs = [24, 12, 44, 33, 29, 5, 33, 3, 46, 12, 32, 20, 43, 7, 45, 37]
     for step_normalization in [True]:
@@ -151,4 +177,4 @@ def main_eer():
 
 
 if __name__ == '__main__':
-    main_eer()
+    main_cr_er()
